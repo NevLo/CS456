@@ -29,7 +29,7 @@ public class DBMSystem {
 		}
 
 		parse("CREATE DATABASE test_DB;");
-
+		parse("USE test_DB;");
 	}
 
 	/*
@@ -42,12 +42,16 @@ public class DBMSystem {
 
 		if (lineToParse.startsWith("--"))
 			return;
+		// see if the line is a command (.exit, .header, etc)
 		if (lineToParse.startsWith(".")) {
 			parseCMD(lineToParse.substring(1));
 			return;
 		}
+		// see if the line has multiple commands in it (CREATE DATABASE DB_1; USE DB_1;)
 		if (lineToParse.indexOf(";") != lineToParse.length() - 1) {
 
+		} else {
+			lineToParse = lineToParse.substring(0, lineToParse.length() - 1);
 		}
 
 		// create an arraylist of the substrings
@@ -68,7 +72,6 @@ public class DBMSystem {
 		else
 			System.out.println("!Command Not Recognized!");
 	}
-	.
 
 	public static void parseCMD(String lineToParse) {
 		// TODO Auto-generated method stub

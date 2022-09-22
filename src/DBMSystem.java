@@ -27,9 +27,14 @@ public class DBMSystem {
 			isExternalFileInUse = true;
 
 		}
-
+		parse("--do nothing");
+		parse("")
 		parse("CREATE DATABASE test_DB;");
 		parse("USE test_DB;");
+		parse("CREATE TABLE test_tbl (a1 int, a2 char(20));");
+	
+		// parse("DROP DATABASE test_DB;");
+		parse(".exit");
 	}
 
 	/*
@@ -54,6 +59,9 @@ public class DBMSystem {
 			lineToParse = lineToParse.substring(0, lineToParse.length() - 1);
 		}
 
+		// see if the command has paramaters, ex: create table tbl (a1 int, a2
+		// char(20));
+
 		// create an arraylist of the substrings
 		ArrayList<String> parseTree = new ArrayList<String>(Arrays.asList(lineToParse.split(" ")));
 		String CMD = parseTree.get(0);
@@ -73,6 +81,10 @@ public class DBMSystem {
 			System.out.println("!Command Not Recognized!");
 	}
 
+	/*
+	 * SQL Command Parser
+	 * 
+	 */
 	public static void parseCMD(String lineToParse) {
 		// TODO Auto-generated method stub
 

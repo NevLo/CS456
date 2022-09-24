@@ -3,10 +3,12 @@
  * 
  */
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 public class DBMS {
 	private static File useDirectory;
@@ -23,7 +25,7 @@ public class DBMS {
 
 	// CREATE DATABASE <NAME>
 	private static boolean createDB(String dir) {
-		// TODO Auto-generated method stub
+		// TODO Auto-generated method stub0
 		File newDir = new File("/" + dir);
 		if (newDir.exists()) {
 			System.out.println("Failed to create database " + dir + " because it already exists");
@@ -44,6 +46,11 @@ public class DBMS {
 	private static boolean createTBL(String tblname, ArrayList<String> parseTree) {
 		if (useDirectory == null) {
 			System.out.println("Failed to create table because a database was not selected.");
+			return false;
+		}
+
+		if ((new File(useDirectory + "/" + tblname + ".tbl").exists())) {
+			System.out.println("Failed to create table" + tblname + " because it already exists.");
 			return false;
 		}
 		parseTree.remove(0);
@@ -69,19 +76,18 @@ public class DBMS {
 		FileWriter table;
 		try {
 			table = new FileWriter(newTable);
-			table.write('|');
-			for (String s : atts) {
-				table.write(s + "|");
-			}
-			table.write("\n|");
-			for (String s : types) {
-				table.write(s + "|");
+			for (int i = 0; i < atts.size(); i++) {
+				table.write(atts.get(i) + " " + types.get(i));
+				if (i != atts.size() - 1) {
+					table.write(" | ");
+				}
 			}
 			table.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println("Table " + tblname + " created.");
 		return true;
 	}
 
@@ -90,22 +96,56 @@ public class DBMS {
 	public static void drop(ArrayList<String> parseTree) {
 		if (parseTree.get(0).equalsIgnoreCase("table")) {
 			if (useDirectory == null) {
-				System.out.println("Failed to drop table, as no database was selected.");
+				System.out.println("!Failed to drop table, as no database was selected.");
+			} else {
+				if ((new File(useDirectory + "/" + parseTree.get(1) + ".tbl")).exists()) {
+					File tbl = new File(useDirectory + "/" + parseTree.get(1) + ".tbl");
+					tbl.delete();
+					System.out.println("Table " + parseTree.get(1) + " deleted.");
+				} else {
+					System.out.println("!Failed to delete table " + parseTree.get(1) + " because it does not exist");
+				}
 			}
 		} else if (parseTree.get(0).equalsIgnoreCase("database")) {
-
+			File db = new File("/" + parseTree.get(1));
+			if (db.exists()) {
+				File[] tbls = db.listFiles();
+				for (File f : tbls) {
+					f.delete();
+				}
+				db.delete();
+				System.out.println("Database " + parseTree.get(1) + " deleted.");
+			} else {
+				System.out.println("!Failed to delete database " + parseTree.get(1) + " because it does not exist.");
+			}
 		}
 	}
 
 	// SELECT <REC:*> FROM <TBLNAME>
 	public static void select(ArrayList<String> parseTree) {
-		for (String s : parseTree) {
-			System.out.println(s);
+		if (!parseTree.get(1).equalsIgnoreCase("from")) {
+			System.out.println("!Invalid Syntax! " + parseTree.get(1) + " is not a valid keyword");
+			return;
+		}
+		if (parseTree.get(0).equalsIgnoreCase("*")) {
+			File tbl = new File(useDirectory + "/" + parseTree.get(2) + ".tbl");
+			Scanner fileReader = null;
+			try {
+				fileReader = new Scanner(tbl);
+			} catch (FileNotFoundException e) {
+				System.out.println("Failed to query table " + parseTree.get(2) + " as it does not exist");
+				return;
+			}
+			while (fileReader.hasNext()) {
+				System.out.print(fileReader.next() + " ");
+			}
+			System.out.println();
+			fileReader.close();
+			return;
 		}
 	}
 
 	// USE <DBNAME>
-
 	public static void use(ArrayList<String> parseTree) {
 		useDirectory = new File("/" + parseTree.get(0));
 		if (useDirectory.exists()) {
@@ -120,8 +160,40 @@ public class DBMS {
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>
 	// ALTER TABLE <TBLNAME> UPDATE <NAME> <TYPE>
 	public static void alter(ArrayList<String> parseTree) {
-		for (String s : parseTree) {
-			System.out.println(s);
+		String tbl = parseTree.get(0);
+		String tblname = parseTree.get(1);
+		String cmd = parseTree.get(2);
+		parseTree.remove(0);
+		parseTree.remove(0);
+		parseTree.remove(0);
+		if (tbl.equalsIgnoreCase("table")) {
+			if (cmd.equalsIgnoreCase("add")) {
+				alterAdd(tblname, parseTree);
+			} else if (cmd.equalsIgnoreCase("remove")) {
+				alterRemove(tblname, parseTree);
+			} else if (cmd.equalsIgnoreCase("update")) {
+				alterUpdate(tblname, parseTree);
+			} else {
+				System.out.println("Invalid alter command");
+			}
+		} else {
+			System.out.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
 		}
 	}
+
+	private static void alterAdd(String tblname, ArrayList<String> parseTree) {
+		// TODO Auto-generated method stub
+		System.out.println("method stub for alter add.");
+	}
+
+	private static void alterRemove(String tblname, ArrayList<String> parseTree) {
+		// TODO Auto-generated method stub
+		System.out.println("method stub for alter remove");
+	}
+
+	private static void alterUpdate(String tblname, ArrayList<String> parseTree) {
+		// TODO Auto-generated method stub
+		System.out.println("method stub for alter update");
+	}
+
 }

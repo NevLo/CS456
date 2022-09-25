@@ -25,19 +25,10 @@ public class DBMSystem {
 	public static void main(String[] args) {
 		if (args.length == 1) {
 			isExternalFileInUse = true;
-
 		}
-		/*
-		 * parse("--do nothing");
-		 * parse("DROP TABLE test_TBL;");
-		 * parse("DROP DATABASE test_DB;");
-		 * parse("CREATE DATABASE test_DB;");
-		 * parse("USE test_DB;");
-		 * parse("CREATE TABLE test_tbl (a1 int, a2 char(20));");
-		 * parse("SELECT * FROM test_tbl;");
-		 * parse("--DROP TABLE test_tbl;");
-		 * parse(".EXIT");
-		 */
+		parse("DROP DATABASE db_1;");
+		parse("DROP DATABASE db_2;");
+		System.out.println("\n\n\n");
 		parse("CREATE DATABASE db_1;");
 		parse("CREATE DATABASE db_1;");
 		parse("CREATE DATABASE db_2;");
@@ -58,6 +49,8 @@ public class DBMSystem {
 		parse("USE db_2;");
 		parse("SELECT * FROM tbl_1;");
 		parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
+		parse("SELECT * FROM tbl_1;");
+		parse("ALTER TABLE tbl_1 UPDATE a5 int");
 		parse("SELECT * FROM tbl_1;");
 		parse(".EXIT");
 		/*
@@ -108,15 +101,10 @@ public class DBMSystem {
 		} else {
 			lineToParse = lineToParse.substring(0, lineToParse.length() - 1);
 		}
-
-		// see if the command has paramaters, ex: create table tbl (a1 int, a2
-		// char(20));
-
-		// create an arraylist of the substrings
+		// create an arraylist of the substrings.
 		ArrayList<String> parseTree = new ArrayList<String>(Arrays.asList(lineToParse.split(" ")));
-		String CMD = parseTree.get(0);
-		parseTree.remove(0);
-
+		// check to see if the cmd is an appropriate valid.
+		String CMD = parseTree.remove(0);
 		if (CMD.equalsIgnoreCase("create"))
 			DBMS.create(parseTree);
 		else if (CMD.equalsIgnoreCase("drop"))

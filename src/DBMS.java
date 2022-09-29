@@ -27,63 +27,83 @@ public class DBMS {
 
 	// CREATE DATABASE <NAME>
 	private static void createDB(String dir) {
-		// TODO Auto-generated method stub0
 		File newDir = new File("/" + dir);
+		// Don't create a database if a database with the same name exists.
 		if (newDir.exists()) {
 			System.out.println("Failed to create database " + dir + " because it already exists");
+			return;
+		}
+		// Make directory and check it was properly made.
+		newDir.mkdir();
+		if (newDir.exists()) {
+			System.out.println("Database " + dir + " created.");
 		} else {
-			newDir.mkdir();
-			if (newDir.exists()) {
-				System.out.println("Database " + dir + " created.");
-			} else {
-				System.out.println("Failed to create database " + dir + "due to an unknown error");
-			}
+			System.out.println("Failed to create database " + dir + "due to an unknown error");
 		}
 	}
 
 	// CREATE TABLE <NAME> (ARGS...)
 	private static void createTBL(String tblname, ArrayList<String> parseTree) {
+		// Don't create a table if no database is in use.
 		if (useDirectory == null) {
 			System.out.println("Failed to create table because a database was not selected.");
-		} else {
-			if ((new File(useDirectory + "/" + tblname + ".tbl").exists())) {
-				System.out.println("Failed to create table" + tblname + " because it already exists.");
-			} else {
-				String attributesLine = "";
-				for (String s : parseTree) {
-					attributesLine += s + " ";
-				}
-				parseTree.clear();
-				attributesLine = attributesLine.substring(1, attributesLine.length() - 2);
-				parseTree = new ArrayList<String>(Arrays.asList(attributesLine.split(",")));
-				ArrayList<String> atts = new ArrayList<>();
-				ArrayList<String> types = new ArrayList<>();
-				for (String s : parseTree) {
-					if (s.startsWith(" ")) {
-						s = s.substring(1);
-					}
-					String[] atType = s.split(" ");
-					atts.add(atType[0]);
-					types.add(atType[1]);
-				}
-				File newTable = new File(useDirectory + "/" + tblname + ".tbl");
-				FileWriter table;
-				try {
-					table = new FileWriter(newTable);
-					for (int i = 0; i < atts.size(); i++) {
-						table.write(atts.get(i) + " " + types.get(i));
-						if (i != atts.size() - 1) {
-							table.write(" | ");
-						}
-					}
-					table.close();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				System.out.println("Table " + tblname + " created.");
-			}
+			return;
 		}
+		// Don't create a table if a table with the same name exists.
+		if ((new File(useDirectory + "/" + tblname + ".tbl").exists())) {
+			System.out.println("Failed to create table" + tblname + " because it already exists.");
+			return;
+		}
+		// Don't create a table if no fields are given.
+		if (!parseTree.isEmpty()) {
+			System.out.println("Failed to create table because no fields were given.");
+			return;
+		}
+		// Combine the parse tree into one single string
+		// This makes it easier to deal with the parenthesis and resplit if needed.
+		String attributesLine = "";
+		for (String s : parseTree) {
+			attributesLine += s + " ";
+		}
+		parseTree.clear();
+		// remove parenthesis if they are there.
+		if (attributesLine.charAt(0) == '(' && attributesLine.charAt(attributesLine.length() - 2) == ')') {
+			attributesLine = attributesLine.substring(1, attributesLine.length() - 2);
+		}
+		// reuse the parse tree to split the string at commas, so each node is of the
+		// form "name type"
+		parseTree = new ArrayList<String>(Arrays.asList(attributesLine.split(",")));
+		ArrayList<String> atts = new ArrayList<>();
+		ArrayList<String> types = new ArrayList<>();
+		// add each type and name to a list.
+		for (String s : parseTree) {
+			if (s.startsWith(" ")) {
+				s = s.substring(1);
+			}
+			String[] atType = s.split(" ");
+			atts.add(atType[0]);
+			types.add(atType[1]);
+		}
+		// create a new filewriter for the table.
+		File newTable = new File(useDirectory + "/" + tblname + ".tbl");
+		FileWriter table;
+		try {
+			// init filewriter
+			table = new FileWriter(newTable);
+			// write to file atts and types ## THIS COULD BE A FUNCTION, AS THIS CODE IS
+			// USED ELSEWHERE ##
+			for (int i = 0; i < atts.size(); i++) {
+				table.write(atts.get(i) + " " + types.get(i));
+				if (i != atts.size() - 1) {
+					table.write(" | ");
+				}
+			}
+			table.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("Table " + tblname + " created.");
 	}
 
 	// DROP DATABASE <NAME>;
@@ -99,42 +119,49 @@ public class DBMS {
 
 	// DROP TABLE <NAME>;
 	private static void dropTBL(ArrayList<String> parseTree) {
+		// Don't drop the table if there is not a currently selected database.
 		if (useDirectory == null) {
 			System.out.println("!Failed to drop table, as no database was selected.");
-		} else {
-			String tblname = parseTree.get(0);
-			if ((new File(useDirectory + "/" + tblname + ".tbl")).exists()) {
-				File tbl = new File(useDirectory + "/" + tblname + ".tbl");
-				tbl.delete();
-				System.out.println("Table " + tblname + " deleted.");
-			} else {
-				System.out.println("!Failed to delete table " + tblname + " because it does not exist");
-			}
+			return;
 		}
+		String tblname = parseTree.get(0);
+		// Don't drop the table if it doesnt exist.
+		if ((new File(useDirectory + "/" + tblname + ".tbl")).exists()) {
+			System.out.println("!Failed to delete table " + tblname + " because it does not exist");
+			return;
+		}
+		File tbl = new File(useDirectory + "/" + tblname + ".tbl");
+		tbl.delete();
+		System.out.println("Table " + tblname + " deleted.");
 	}
 
 	// DROP DATABASE <NAME>
 	private static void dropDB(ArrayList<String> parseTree) {
 		String dbname = parseTree.get(0);
 		File db = new File("/" + dbname);
-		if (db.exists()) {
-			File[] tbls = db.listFiles();
-			for (File f : tbls) {
-				f.delete();
-			}
-			db.delete();
-			System.out.println("Database " + dbname + " deleted.");
-		} else {
+		// Don't drop the database if it doesnt exist.
+		if (!db.exists()) {
 			System.out.println("!Failed to delete database " + dbname + " because it does not exist.");
 		}
+		File[] tbls = db.listFiles();
+		for (File f : tbls) {
+			f.delete();
+		}
+		db.delete();
+		System.out.println("Database " + dbname + " deleted.");
 	}
 
 	// SELECT <REC:*> FROM <TBLNAME>
 	public static void select(ArrayList<String> parseTree) {
+		// if from isnt in here correctly
+		// ## THIS WILL NEED TO BE CHANGED WHEN SELECT COLOUMNS IS ADDED LATER ##
+
 		if (!parseTree.get(1).equalsIgnoreCase("from")) {
 			System.out.println("!Invalid Syntax! " + parseTree.get(1) + " is not a valid keyword");
 			return;
 		}
+		// Select all from table
+		//
 		if (parseTree.get(0).equalsIgnoreCase("*")) {
 			File tbl = new File(useDirectory + "/" + parseTree.get(2) + ".tbl");
 			Scanner fileReader = null;
@@ -169,53 +196,53 @@ public class DBMS {
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>
 	// ALTER TABLE <TBLNAME> UPDATE <NAME> <TYPE>
 	public static void alter(ArrayList<String> parseTree) {
+		// Don't alter a table if no database is selected.
 		if (useDirectory == null) {
 			System.out.println("!Failed to alter table because no database has been selected.");
-		} else {
-			String tbl = parseTree.remove(0);
-			String tblname = parseTree.remove(0);
-			String cmd = parseTree.remove(0);
-			if (tbl.equalsIgnoreCase("table")) {
-				File tblFile = new File(useDirectory + "/" + tblname + ".tbl");
-				// System.out.println(tblFile.length());
-				Scanner fileReader = null;
-				try {
-					fileReader = new Scanner(tblFile);
-					ArrayList<String> atts = new ArrayList<String>();
-					ArrayList<String> types = new ArrayList<String>();
-					String[] list = fileReader.nextLine().split(" \\| ");
-					for (String s : list) {
-						String[] atType = s.split(" ");
-						atts.add(atType[0]);
-						types.add(atType[1]);
-					}
-					fileReader.close();
-					if (cmd.equalsIgnoreCase("add")) {
-						alterAdd(atts, types, parseTree);
-					} else if (cmd.equalsIgnoreCase("remove")) {
-						alterRemove(atts, types, parseTree);
-					} else if (cmd.equalsIgnoreCase("update")) {
-						alterUpdate(atts, types, parseTree);
-					} else {
-						System.out.println("Invalid alter command");
-					}
-					FileWriter fw = new FileWriter(tblFile);
-					for (int i = 0; i < atts.size(); i++) {
-						fw.write(atts.get(i) + " " + types.get(i));
-						if (i != atts.size() - 1) {
-							fw.write(" | ");
-						}
-					}
-					fw.close();
-				} catch (FileNotFoundException e) {
-					System.out.println("!Failed to alter table " + tblname + "because it does not exist.");
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			} else {
-				System.out.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
+			return;
+		}
+		String tbl = parseTree.remove(0);
+		String tblname = parseTree.remove(0);
+		String cmd = parseTree.remove(0);
+		// check for proper syntax on table.
+		if (!tbl.equalsIgnoreCase("table")) {
+			System.out.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
+		}
+		File tblFile = new File(useDirectory + "/" + tblname + ".tbl");
+		Scanner fileReader = null;
+		try {
+			fileReader = new Scanner(tblFile);
+			ArrayList<String> atts = new ArrayList<String>();
+			ArrayList<String> types = new ArrayList<String>();
+			String[] list = fileReader.nextLine().split(" \\| ");
+			for (String s : list) {
+				String[] atType = s.split(" ");
+				atts.add(atType[0]);
+				types.add(atType[1]);
 			}
+			fileReader.close();
+			if (cmd.equalsIgnoreCase("add")) {
+				alterAdd(atts, types, parseTree);
+			} else if (cmd.equalsIgnoreCase("remove")) {
+				alterRemove(atts, types, parseTree);
+			} else if (cmd.equalsIgnoreCase("update")) {
+				alterUpdate(atts, types, parseTree);
+			} else {
+				System.out.println("Invalid alter command");
+			}
+			FileWriter fw = new FileWriter(tblFile);
+			for (int i = 0; i < atts.size(); i++) {
+				fw.write(atts.get(i) + " " + types.get(i));
+				if (i != atts.size() - 1) {
+					fw.write(" | ");
+				}
+			}
+			fw.close();
+		} catch (FileNotFoundException e) {
+			System.out.println("!Failed to alter table " + tblname + "because it does not exist.");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 
@@ -254,6 +281,13 @@ public class DBMS {
 			}
 		}
 		System.out.println("!Failed to update tuple " + parseTree.get(0) + " as it does not exist.");
+	}
+
+	// INSERT INTO <TBLNAME> (c1, c2, c3...) VALUES (v1, v2, v3...);
+	// INSERT INTO <TBLNAME> VALUES (v1, v2, v3...);
+	public static void insert(ArrayList<String> parseTree) {
+		// TODO Auto-generated method stub
+
 	}
 
 }

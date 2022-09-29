@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Scanner;
 
 /*
  * DBMS Project
@@ -26,34 +27,41 @@ public class DBMSystem {
 		if (args.length == 1) {
 			isExternalFileInUse = true;
 		}
-		parse("DROP DATABASE db_1;");
-		parse("DROP DATABASE db_2;");
-		System.out.println("\n\n\n");
-		parse("CREATE DATABASE db_1;");
-		parse("CREATE DATABASE db_1;");
-		parse("CREATE DATABASE db_2;");
-		parse("DROP DATABASE db_2;");
-		parse("DROP DATABASE db_2;");
-		parse("CREATE DATABASE db_2;");
-		parse("USE db_1;");
-		parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
-		parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
-		parse("DROP TABLE tbl_1;");
-		parse("DROP TABLE tbl_1;");
-		parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
-		parse("SELECT * FROM tbl_1;");
-		parse("ALTER TABLE tbl_1 ADD a3 float;");
-		parse("SELECT * FROM tbl_1;");
-		parse("CREATE TABLE tbl_2 (a3 float, a4 char(20));");
-		parse("SELECT * FROM tbl_2;");
-		parse("USE db_2;");
-		parse("SELECT * FROM tbl_1;");
-		parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
-		parse("SELECT * FROM tbl_1;");
-		parse("ALTER TABLE tbl_1 UPDATE a5 int");
-		parse("SELECT * FROM tbl_1;");
-		parse(".EXIT");
+		Scanner inputStream = new Scanner(System.in);
+		while (inputStream.hasNext()) {
+			String input = inputStream.nextLine();
+			parse(input);
+		}
+
 		/*
+		 * parse("DROP DATABASE db_1;");
+		 * parse("DROP DATABASE db_2;");
+		 * System.out.println("\n\n\n");
+		 * parse("CREATE DATABASE db_1;");
+		 * parse("CREATE DATABASE db_1;");
+		 * parse("CREATE DATABASE db_2;");
+		 * parse("DROP DATABASE db_2;");
+		 * parse("DROP DATABASE db_2;");
+		 * parse("CREATE DATABASE db_2;");
+		 * parse("USE db_1;");
+		 * parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
+		 * parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
+		 * parse("DROP TABLE tbl_1;");
+		 * parse("DROP TABLE tbl_1;");
+		 * parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
+		 * parse("SELECT * FROM tbl_1;");
+		 * parse("ALTER TABLE tbl_1 ADD a3 float;");
+		 * parse("SELECT * FROM tbl_1;");
+		 * parse("CREATE TABLE tbl_2 (a3 float, a4 char(20));");
+		 * parse("SELECT * FROM tbl_2;");
+		 * parse("USE db_2;");
+		 * parse("SELECT * FROM tbl_1;");
+		 * parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
+		 * parse("SELECT * FROM tbl_1;");
+		 * parse("ALTER TABLE tbl_1 UPDATE a5 int");
+		 * parse("SELECT * FROM tbl_1;");
+		 * parse(".EXIT");
+		 * 
 		 * -- Expected output
 		 * -- Database db_1 created.
 		 * -- !Failed to create database db_1 because it already exists.
@@ -98,12 +106,12 @@ public class DBMSystem {
 		// see if the line has multiple commands in it (CREATE DATABASE DB_1; USE DB_1;)
 		if (lineToParse.indexOf(";") != lineToParse.length() - 1) {
 
-		} else {
+		} else if (lineToParse.indexOf(";") != -1) {
 			lineToParse = lineToParse.substring(0, lineToParse.length() - 1);
 		}
 		// create an arraylist of the substrings.
 		ArrayList<String> parseTree = new ArrayList<String>(Arrays.asList(lineToParse.split(" ")));
-		// check to see if the cmd is an appropriate valid.
+		// check to see if the cmd is valid.
 		String CMD = parseTree.remove(0);
 		if (CMD.equalsIgnoreCase("create"))
 			DBMS.create(parseTree);
@@ -115,6 +123,8 @@ public class DBMSystem {
 			DBMS.use(parseTree);
 		else if (CMD.equalsIgnoreCase("alter"))
 			DBMS.alter(parseTree);
+		else if (CMD.equalsIgnoreCase("insert"))
+			DBMS.insert(parseTree);
 		else
 			System.out.println("!Command Not Recognized!");
 	}
@@ -132,11 +142,11 @@ public class DBMSystem {
 			System.out.println("All done.");
 			System.exit(0);
 		} else if (cmd.equalsIgnoreCase("header")) {
-
+			System.out.println("!Command not implemented!");
 		} else if (cmd.equalsIgnoreCase("mode")) {
-
+			System.out.println("!Command not implemented!");
 		} else if (cmd.equalsIgnoreCase("nullValue")) {
-
+			System.out.println("!Command not implemented!");
 		}
 	}
 }

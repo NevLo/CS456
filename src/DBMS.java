@@ -244,20 +244,56 @@ public class DBMS {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println("Table " + tblname + " modified.");
 	}
 
 	// ALTER TABLE <TBLNAME> ADD <NAME> <TYPE>
 	// ALTER TABLE <TBLNAME> ADD (<NAME> <TYPE>...)
 	private static void alterAdd(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
+		// Check to see if the parse tree size is 2
+		// If size = 2, then you dont need to deal with commas and parenthesis.
 		if (parseTree.size() == 2) {
-			atts.add(parseTree.get(0));
-			types.add(parseTree.get(1));
-		} else {
-			String addedAtts = "";
-			for (String s : parseTree) {
-				addedAtts += s + " ";
+			String att = parseTree.remove(0);
+			String type = parseTree.remove(0);
+			// if the new attribute name is the same as a previous one, return
+			if (atts.contains(att)) {
+				System.out.println("Failed to add field " + att + " because it already exists");
+				return;
 			}
+			atts.add(att);
+			types.add(type);
+			return;
 		}
+		// combine the parse tree into one string.
+		String addedAtts = "";
+		for (String s : parseTree) {
+			addedAtts += s + " ";
+		}
+		parseTree.clear();
+		// remove parenthesis if they are there.
+		addedAtts = addedAtts.substring(1, addedAtts.length() - 2);
+		// reuse the parse tree to split the string at commas, so each node is of the
+		// form "name type"
+		parseTree = new ArrayList<String>(Arrays.asList(addedAtts.split(",")));
+		// add each type and name to a list.
+		ArrayList<String> a = new ArrayList<>();
+		ArrayList<String> t = new ArrayList<>();
+		for (String s : parseTree) {
+			if (s.startsWith(" ")) {
+				s = s.substring(1);
+			}
+			String[] atType = s.split(" ");
+			// make sure that the type name isnt already one
+			if (atts.contains(atType[0])) {
+				System.out.println("Failed to add field " + atType[0] + " because it already exists");
+				continue;
+			}
+			a.add(atType[0]);
+			t.add(atType[1]);
+		}
+		atts.addAll(a);
+		types.addAll(t);
+
 	}
 
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>

@@ -27,6 +27,11 @@ public class DBMS {
 
 	// CREATE DATABASE <NAME>
 	private static void createDB(String dir) {
+		// Check to see if the database name string is empty.
+		if (dir.isEmpty()) {
+			System.out.println("Failed to create database as no name was specified.");
+			return;
+		}
 		File newDir = new File("/" + dir);
 		// Don't create a database if a database with the same name exists.
 		if (newDir.exists()) {
@@ -155,6 +160,7 @@ public class DBMS {
 	public static void select(ArrayList<String> parseTree) {
 		// if from isnt in here correctly
 		// ## THIS WILL NEED TO BE CHANGED WHEN SELECT COLOUMNS IS ADDED LATER ##
+		// THIS WILL NEED A MASSIVE REWRITE BUT THATS FOR FUTURE ME
 
 		if (!parseTree.get(1).equalsIgnoreCase("from")) {
 			System.out.println("!Invalid Syntax! " + parseTree.get(1) + " is not a valid keyword");
@@ -250,6 +256,10 @@ public class DBMS {
 	// ALTER TABLE <TBLNAME> ADD <NAME> <TYPE>
 	// ALTER TABLE <TBLNAME> ADD (<NAME> <TYPE>...)
 	private static void alterAdd(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
+		// check to make sure arguments have been passed to add.
+		if (parseTree.isEmpty()) {
+			System.out.println("!Failed to add: no arguments specified.");
+		}
 		// Check to see if the parse tree size is 2
 		// If size = 2, then you dont need to deal with commas and parenthesis.
 		if (parseTree.size() == 2) {
@@ -288,6 +298,7 @@ public class DBMS {
 				System.out.println("Failed to add field " + atType[0] + " because it already exists");
 				continue;
 			}
+			// add to a list just incase one fails, we dont want it to bork.
 			a.add(atType[0]);
 			t.add(atType[1]);
 		}
@@ -298,6 +309,10 @@ public class DBMS {
 
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>
 	private static void alterRemove(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
+		if (parseTree.size() != 1) {
+			System.out.println("!Invalid number of arguments: " + parseTree.size());
+			return;
+		}
 		for (int i = 0; i < atts.size(); i++) {
 			if (atts.get(i).equalsIgnoreCase(parseTree.get(0))) {
 				atts.remove(i);
@@ -310,6 +325,10 @@ public class DBMS {
 
 	// ALTER TABLE <TBLNAME> UPDATE <NAME> <TYPE>
 	private static void alterUpdate(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
+		if (parseTree.size() != 2) {
+			System.out.println("!Invalid number of arguements: " + parseTree.size());
+		}
+
 		for (int i = 0; i < atts.size(); i++) {
 			if (atts.get(i).equalsIgnoreCase(parseTree.get(0))) {
 				types.set(i, parseTree.get(1));

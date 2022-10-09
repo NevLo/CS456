@@ -1,3 +1,5 @@
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -21,11 +23,18 @@ import java.util.Scanner;
  * Part 4: __ (Due: __/__/2022)
  */
 public class DBMSystem {
-	private static boolean isExternalFileInUse;
+	public static void main(String[] args) throws FileNotFoundException {
+		if (args.length == 2) {
+			if (!args[1].endsWith(".sql")) {
+				args[1] += ".sql";
+			}
+			Scanner scan = new Scanner(new File(args[1]));
+			while (scan.hasNext()) {
+				parse(scan.nextLine());
+			}
 
-	public static void main(String[] args) {
-		if (args.length == 1) {
-			isExternalFileInUse = true;
+			scan.close();
+			return;
 		}
 		Scanner inputStream = new Scanner(System.in);
 		while (inputStream.hasNext()) {
@@ -33,59 +42,7 @@ public class DBMSystem {
 			parse(input);
 		}
 
-		/*
-		 * parse("DROP DATABASE db_1;");
-		 * parse("DROP DATABASE db_2;");
-		 * System.out.println("\n\n\n");
-		 * parse("CREATE DATABASE db_1;");
-		 * parse("CREATE DATABASE db_1;");
-		 * parse("CREATE DATABASE db_2;");
-		 * parse("DROP DATABASE db_2;");
-		 * parse("DROP DATABASE db_2;");
-		 * parse("CREATE DATABASE db_2;");
-		 * parse("USE db_1;");
-		 * parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
-		 * parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
-		 * parse("DROP TABLE tbl_1;");
-		 * parse("DROP TABLE tbl_1;");
-		 * parse("CREATE TABLE tbl_1 (a1 int, a2 varchar(20));");
-		 * parse("SELECT * FROM tbl_1;");
-		 * parse("ALTER TABLE tbl_1 ADD a3 float;");
-		 * parse("SELECT * FROM tbl_1;");
-		 * parse("CREATE TABLE tbl_2 (a3 float, a4 char(20));");
-		 * parse("SELECT * FROM tbl_2;");
-		 * parse("USE db_2;");
-		 * parse("SELECT * FROM tbl_1;");
-		 * parse("CREATE TABLE tbl_1 (a3 float, a4 char(20));");
-		 * parse("SELECT * FROM tbl_1;");
-		 * parse("ALTER TABLE tbl_1 UPDATE a5 int");
-		 * parse("SELECT * FROM tbl_1;");
-		 * parse(".EXIT");
-		 * 
-		 * -- Expected output
-		 * -- Database db_1 created.
-		 * -- !Failed to create database db_1 because it already exists.
-		 * -- Database db_2 created.
-		 * -- Database db_2 deleted.
-		 * -- !Failed to delete db_2 because it does not exist.
-		 * -- Database db_2 created.
-		 * -- Using database db_1.
-		 * -- Table tbl_1 created.
-		 * -- !Failed to create table tbl_1 because it already exists.
-		 * -- Table tbl_1 deleted.
-		 * -- !Failed to delete tbl_1 because it does not exist.
-		 * -- Table tbl_1 created.
-		 * -- a1 int | a2 varchar(20)
-		 * -- Table tbl_1 modified.
-		 * -- a1 int | a2 varchar(20) | a3 float
-		 * -- Table tbl_2 created.
-		 * -- a3 float | a4 char(20)
-		 * -- Using Database db_2.
-		 * -- !Failed to query table tbl_1 because it does not exist.
-		 * -- Table tbl_1 created.
-		 * -- a3 float | a4 char(20)
-		 * -- All done.
-		 */
+		inputStream.close();
 	}
 
 	/*
@@ -95,7 +52,6 @@ public class DBMSystem {
 	public static void parse(String lineToParse) {
 		// check to see if the line is a comment, if so return (does not support multi
 		// line comments yet)
-
 		if (lineToParse.startsWith("--"))
 			return;
 		// see if the line is a command (.exit, .header, etc)
@@ -103,10 +59,23 @@ public class DBMSystem {
 			parseCMD(lineToParse.substring(1));
 			return;
 		}
+		// check to see if there is no semicolon (syntax error)
+		if (lineToParse.indexOf(';') == -1) {
+			System.out.println("!Invalid Syntax, missing ';'");
+			return;
+		}
 		// see if the line has multiple commands in it (CREATE DATABASE DB_1; USE DB_1;)
+		// this is done because String.indexOf() checks for the first instance of a
+		// character.
 		if (lineToParse.indexOf(";") != lineToParse.length() - 1) {
-
-		} else if (lineToParse.indexOf(";") != -1) {
+			// breaks the string down into multiple at the location of semicolons.
+			String[] listOfLines = lineToParse.split(";");
+			// parse the lines (adding a semicolon because it was removed in the split)
+			for (String s : listOfLines) {
+				parse(s + ";");
+			}
+		}
+		if (lineToParse.indexOf(";") != -1) {
 			lineToParse = lineToParse.substring(0, lineToParse.length() - 1);
 		}
 		// create an arraylist of the substrings.
@@ -127,6 +96,8 @@ public class DBMSystem {
 			DBMS.insert(parseTree);
 		else
 			System.out.println("!Command Not Recognized!");
+		// Just to make sure memory gets clear properly.
+		parseTree.clear();
 	}
 
 	/*

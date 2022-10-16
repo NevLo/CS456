@@ -60,7 +60,7 @@ public class DBMS {
 			return;
 		}
 		// Don't create a table if no fields are given.
-		if (!parseTree.isEmpty()) {
+		if (parseTree.isEmpty()) {
 			System.out.println("Failed to create table because no fields were given.");
 			return;
 		}
@@ -147,6 +147,7 @@ public class DBMS {
 		// Don't drop the database if it doesnt exist.
 		if (!db.exists()) {
 			System.out.println("!Failed to delete database " + dbname + " because it does not exist.");
+			return;
 		}
 		File[] tbls = db.listFiles();
 		for (File f : tbls) {
@@ -341,7 +342,10 @@ public class DBMS {
 	// INSERT INTO <TBLNAME> (c1, c2, c3...) VALUES (v1, v2, v3...);
 	// INSERT INTO <TBLNAME> VALUES (v1, v2, v3...);
 	public static void insert(ArrayList<String> parseTree) {
-		// TODO Auto-generated method stub
+		if (useDirectory == null) {
+			System.out.println("Failed to insert into table because no database has been selected.");
+			return;
+		}
 
 	}
 

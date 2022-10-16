@@ -22,13 +22,15 @@ import java.util.Scanner;
  * Part 3: __ (Due: __/__/2022)
  * Part 4: __ (Due: __/__/2022)
  */
-public class DBMSystem {
+public class Main {
 	public static void main(String[] args) throws FileNotFoundException {
-		if (args.length == 2) {
-			if (!args[1].endsWith(".sql")) {
-				args[1] += ".sql";
+		System.out.println("DBMS system launched.\n");
+		System.out.println(args.length + "\n");
+		if (args.length == 1) {
+			if (!args[0].endsWith(".sql")) {
+				args[0] += ".sql";
 			}
-			Scanner scan = new Scanner(new File(args[1]));
+			Scanner scan = new Scanner(new File(args[0]));
 			while (scan.hasNext()) {
 				parse(scan.nextLine());
 			}

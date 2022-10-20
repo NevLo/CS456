@@ -82,6 +82,9 @@ public class Main {
 		}
 		// create an arraylist of the substrings.
 		ArrayList<String> parseTree = new ArrayList<String>(Arrays.asList(lineToParse.split(" ")));
+		for (String str : parseTree) {
+			str = str.toLowerCase();
+		}
 		// check to see if the cmd is valid.
 		String CMD = parseTree.remove(0);
 		if (CMD.equalsIgnoreCase("create"))

@@ -29,13 +29,13 @@ public class DBMS {
 	private static void createDB(String dir) {
 		// Check to see if the database name string is empty.
 		if (dir.isEmpty()) {
-			System.out.println("Failed to create database as no name was specified.");
+			System.err.println("Failed to create database as no name was specified.");
 			return;
 		}
 		File newDir = new File("/" + dir);
 		// Don't create a database if a database with the same name exists.
 		if (newDir.exists()) {
-			System.out.println("Failed to create database " + dir + " because it already exists");
+			System.err.println("Failed to create database " + dir + " because it already exists");
 			return;
 		}
 		// Make directory and check it was properly made.
@@ -43,7 +43,7 @@ public class DBMS {
 		if (newDir.exists()) {
 			System.out.println("Database " + dir + " created.");
 		} else {
-			System.out.println("Failed to create database " + dir + "due to an unknown error");
+			System.err.println("Failed to create database " + dir + "due to an unknown error");
 		}
 	}
 
@@ -51,17 +51,17 @@ public class DBMS {
 	private static void createTBL(String tblname, ArrayList<String> parseTree) {
 		// Don't create a table if no database is in use.
 		if (useDirectory == null) {
-			System.out.println("Failed to create table because a database was not selected.");
+			System.err.println("Failed to create table because a database was not selected.");
 			return;
 		}
 		// Don't create a table if a table with the same name exists.
 		if ((new File(useDirectory + "/" + tblname + ".tbl").exists())) {
-			System.out.println("Failed to create table" + tblname + " because it already exists.");
+			System.err.println("Failed to create table" + tblname + " because it already exists.");
 			return;
 		}
 		// Don't create a table if no fields are given.
 		if (parseTree.isEmpty()) {
-			System.out.println("Failed to create table because no fields were given.");
+			System.err.println("Failed to create table because no fields were given.");
 			return;
 		}
 		// Combine the parse tree into one single string
@@ -126,13 +126,13 @@ public class DBMS {
 	private static void dropTBL(ArrayList<String> parseTree) {
 		// Don't drop the table if there is not a currently selected database.
 		if (useDirectory == null) {
-			System.out.println("!Failed to drop table, as no database was selected.");
+			System.err.println("!Failed to drop table, as no database was selected.");
 			return;
 		}
 		String tblname = parseTree.get(0);
 		// Don't drop the table if it doesnt exist.
-		if ((new File(useDirectory + "/" + tblname + ".tbl")).exists()) {
-			System.out.println("!Failed to delete table " + tblname + " because it does not exist");
+		if (!(new File(useDirectory + "/" + tblname + ".tbl")).exists()) {
+			System.err.println("!Failed to delete table " + tblname + " because it does not exist");
 			return;
 		}
 		File tbl = new File(useDirectory + "/" + tblname + ".tbl");
@@ -146,7 +146,7 @@ public class DBMS {
 		File db = new File("/" + dbname);
 		// Don't drop the database if it doesnt exist.
 		if (!db.exists()) {
-			System.out.println("!Failed to delete database " + dbname + " because it does not exist.");
+			System.err.println("!Failed to delete database " + dbname + " because it does not exist.");
 			return;
 		}
 		File[] tbls = db.listFiles();
@@ -159,23 +159,34 @@ public class DBMS {
 
 	// SELECT <REC:*> FROM <TBLNAME>
 	public static void select(ArrayList<String> parseTree) {
-		// if from isnt in here correctly
-		// ## THIS WILL NEED TO BE CHANGED WHEN SELECT COLOUMNS IS ADDED LATER ##
-		// THIS WILL NEED A MASSIVE REWRITE BUT THATS FOR FUTURE ME
-
+		// check to see if a database is selected.
+		if (useDirectory == null) {
+			System.err.println("!Failed to select from table as no database has been used.");
+			return;
+		}
+		// check to see if its the simple case of wanting a single column or all.
+		int whereInd = parseTree.indexOf("where");
 		if (!parseTree.get(1).equalsIgnoreCase("from")) {
-			System.out.println("!Invalid Syntax! " + parseTree.get(1) + " is not a valid keyword");
+			// check to find the index of from
+			int fromInd = parseTree.indexOf("from");
+			// check to see if from index is -1 (syntax error)
+			if (fromInd == -1) {
+				System.err.println("!Failed to select due to a syntax error! FROM not included.");
+			}
+			// grab all coloumn names.
+			ArrayList<String> cols = new ArrayList<String>(parseTree.subList(1, fromInd));
+			Scanner fileReader = null;
+
 			return;
 		}
 		// Select all from table
-		//
 		if (parseTree.get(0).equalsIgnoreCase("*")) {
 			File tbl = new File(useDirectory + "/" + parseTree.get(2) + ".tbl");
 			Scanner fileReader = null;
 			try {
 				fileReader = new Scanner(tbl);
 			} catch (FileNotFoundException e) {
-				System.out.println("!Failed to query table " + parseTree.get(2) + " as it does not exist");
+				System.err.println("!Failed to query table " + parseTree.get(2) + " as it does not exist");
 				return;
 			}
 			while (fileReader.hasNext()) {
@@ -185,6 +196,7 @@ public class DBMS {
 			fileReader.close();
 			return;
 		}
+		// select specific column from table.
 	}
 
 	// USE <DBNAME>
@@ -194,7 +206,7 @@ public class DBMS {
 		if (useDirectory.exists()) {
 			System.out.println("Using Database " + dirName);
 		} else {
-			System.out.println("!Failed to use database " + dirName + " because it does not exist.");
+			System.err.println("!Failed to use database " + dirName + " because it does not exist.");
 		}
 	}
 
@@ -205,7 +217,7 @@ public class DBMS {
 	public static void alter(ArrayList<String> parseTree) {
 		// Don't alter a table if no database is selected.
 		if (useDirectory == null) {
-			System.out.println("!Failed to alter table because no database has been selected.");
+			System.err.println("!Failed to alter table because no database has been selected.");
 			return;
 		}
 		String tbl = parseTree.remove(0);
@@ -213,7 +225,7 @@ public class DBMS {
 		String cmd = parseTree.remove(0);
 		// check for proper syntax on table.
 		if (!tbl.equalsIgnoreCase("table")) {
-			System.out.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
+			System.err.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
 		}
 		File tblFile = new File(useDirectory + "/" + tblname + ".tbl");
 		Scanner fileReader = null;
@@ -235,7 +247,7 @@ public class DBMS {
 			} else if (cmd.equalsIgnoreCase("update")) {
 				alterUpdate(atts, types, parseTree);
 			} else {
-				System.out.println("Invalid alter command");
+				System.err.println("Invalid alter command");
 			}
 			FileWriter fw = new FileWriter(tblFile);
 			for (int i = 0; i < atts.size(); i++) {
@@ -246,7 +258,8 @@ public class DBMS {
 			}
 			fw.close();
 		} catch (FileNotFoundException e) {
-			System.out.println("!Failed to alter table " + tblname + "because it does not exist.");
+			System.err.println("!Failed to alter table " + tblname + "because it does not exist.");
+			return;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -259,7 +272,7 @@ public class DBMS {
 	private static void alterAdd(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
 		// check to make sure arguments have been passed to add.
 		if (parseTree.isEmpty()) {
-			System.out.println("!Failed to add: no arguments specified.");
+			System.err.println("!Failed to add: no arguments specified.");
 		}
 		// Check to see if the parse tree size is 2
 		// If size = 2, then you dont need to deal with commas and parenthesis.
@@ -268,7 +281,7 @@ public class DBMS {
 			String type = parseTree.remove(0);
 			// if the new attribute name is the same as a previous one, return
 			if (atts.contains(att)) {
-				System.out.println("Failed to add field " + att + " because it already exists");
+				System.err.println("Failed to add field " + att + " because it already exists");
 				return;
 			}
 			atts.add(att);
@@ -296,7 +309,7 @@ public class DBMS {
 			String[] atType = s.split(" ");
 			// make sure that the type name isnt already one
 			if (atts.contains(atType[0])) {
-				System.out.println("Failed to add field " + atType[0] + " because it already exists");
+				System.err.println("Failed to add field " + atType[0] + " because it already exists");
 				continue;
 			}
 			// add to a list just incase one fails, we dont want it to bork.
@@ -311,7 +324,7 @@ public class DBMS {
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>
 	private static void alterRemove(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
 		if (parseTree.size() != 1) {
-			System.out.println("!Invalid number of arguments: " + parseTree.size());
+			System.err.println("!Invalid number of arguments: " + parseTree.size());
 			return;
 		}
 		for (int i = 0; i < atts.size(); i++) {
@@ -321,13 +334,13 @@ public class DBMS {
 				return;
 			}
 		}
-		System.out.println("!Failed to remove tuple " + parseTree.get(0) + " as it does not exist.");
+		System.err.println("!Failed to remove tuple " + parseTree.get(0) + " as it does not exist.");
 	}
 
 	// ALTER TABLE <TBLNAME> UPDATE <NAME> <TYPE>
 	private static void alterUpdate(ArrayList<String> atts, ArrayList<String> types, ArrayList<String> parseTree) {
 		if (parseTree.size() != 2) {
-			System.out.println("!Invalid number of arguements: " + parseTree.size());
+			System.err.println("!Invalid number of arguements: " + parseTree.size());
 		}
 
 		for (int i = 0; i < atts.size(); i++) {
@@ -336,15 +349,26 @@ public class DBMS {
 				return;
 			}
 		}
-		System.out.println("!Failed to update tuple " + parseTree.get(0) + " as it does not exist.");
+		System.err.println("!Failed to update tuple " + parseTree.get(0) + " as it does not exist.");
 	}
 
 	// INSERT INTO <TBLNAME> (c1, c2, c3...) VALUES (v1, v2, v3...);
 	// INSERT INTO <TBLNAME> VALUES (v1, v2, v3...);
 	public static void insert(ArrayList<String> parseTree) {
 		if (useDirectory == null) {
-			System.out.println("Failed to insert into table because no database has been selected.");
+			System.err.println("Failed to insert into table because no database has been selected.");
 			return;
+		}
+		File file = new File(useDirectory + "/" + parseTree.get(1) + ".tbl");
+		if (!file.exists()) {
+			System.err.println("Failed to insert into table, as it does not exist.");
+		}
+		FileWriter fw = null;
+		try {
+			fw = new FileWriter(file);
+
+		} catch (IOException e) {
+
 		}
 
 	}

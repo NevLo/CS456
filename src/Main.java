@@ -32,7 +32,9 @@ public class Main {
 			}
 			Scanner scan = new Scanner(new File(args[0]));
 			while (scan.hasNext()) {
-				parse(scan.nextLine());
+				String s = scan.nextLine();
+				// System.out.println(s);
+				parse(s, scan);
 			}
 
 			scan.close();
@@ -41,7 +43,7 @@ public class Main {
 		Scanner inputStream = new Scanner(System.in);
 		while (inputStream.hasNext()) {
 			String input = inputStream.nextLine();
-			parse(input);
+			parse(input, inputStream);
 		}
 
 		inputStream.close();
@@ -51,10 +53,10 @@ public class Main {
 	 * SQL parser.
 	 * 
 	 */
-	public static void parse(String lineToParse) {
+	public static void parse(String lineToParse, Scanner scan) {
 		// check to see if the line is a comment, if so return (does not support multi
 		// line comments yet)
-		if (lineToParse.startsWith("--"))
+		if (lineToParse.startsWith("--") || lineToParse.equalsIgnoreCase(""))
 			return;
 		// see if the line is a command (.exit, .header, etc)
 		if (lineToParse.startsWith(".")) {
@@ -63,8 +65,9 @@ public class Main {
 		}
 		// check to see if there is no semicolon (syntax error)
 		if (lineToParse.indexOf(';') == -1) {
-			System.out.println("!Invalid Syntax, missing ';'");
-			return;
+			lineToParse += " " + parseMultiLine(scan);
+			// System.out.println("!Invalid Syntax, missing ';'");
+			// return;
 		}
 		// see if the line has multiple commands in it (CREATE DATABASE DB_1; USE DB_1;)
 		// this is done because String.indexOf() checks for the first instance of a
@@ -74,7 +77,7 @@ public class Main {
 			String[] listOfLines = lineToParse.split(";");
 			// parse the lines (adding a semicolon because it was removed in the split)
 			for (String s : listOfLines) {
-				parse(s + ";");
+				parse(s + ";", scan);
 			}
 		}
 		if (lineToParse.indexOf(";") != -1) {
@@ -85,6 +88,7 @@ public class Main {
 		for (String str : parseTree) {
 			str = str.toLowerCase();
 		}
+		// System.out.println(parseTree);
 		// check to see if the cmd is valid.
 		String CMD = parseTree.remove(0);
 		if (CMD.equalsIgnoreCase("create"))
@@ -99,10 +103,23 @@ public class Main {
 			DBMS.alter(parseTree);
 		else if (CMD.equalsIgnoreCase("insert"))
 			DBMS.insert(parseTree);
+		else if (CMD.equalsIgnoreCase("delete"))
+			DBMS.delete(parseTree);
+		else if (CMD.equalsIgnoreCase("update"))
+			DBMS.update(parseTree);
 		else
 			System.out.println("!Command Not Recognized!");
 		// Just to make sure memory gets clear properly.
 		parseTree.clear();
+	}
+
+	private static String parseMultiLine(Scanner s) {
+		String line = s.nextLine();
+		// System.out.println(line);
+		if (line.indexOf(';') == -1) {
+			return line + " " + parseMultiLine(s);
+		}
+		return line;
 	}
 
 	/*

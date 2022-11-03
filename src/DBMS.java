@@ -103,6 +103,7 @@ public class DBMS {
 					table.write(" | ");
 				}
 			}
+			table.write("\n");
 			table.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -164,6 +165,7 @@ public class DBMS {
 			System.err.println("!Failed to select from table as no database has been used.");
 			return;
 		}
+
 		// check to see if its the simple case of wanting a single column or all.
 		int whereInd = parseTree.indexOf("where");
 		if (!parseTree.get(1).equalsIgnoreCase("from")) {
@@ -174,9 +176,82 @@ public class DBMS {
 				System.err.println("!Failed to select due to a syntax error! FROM not included.");
 			}
 			// grab all coloumn names.
-			ArrayList<String> cols = new ArrayList<String>(parseTree.subList(1, fromInd));
+			ArrayList<String> cols = new ArrayList<String>(parseTree.subList(0, fromInd));
+			for (String s : cols) {
+				if (s.indexOf(',') == s.length() - 1) {
+					s = s.substring(0, s.length() - 1);
+				}
+			}
+			File tbl = new File(useDirectory + "/" + parseTree.get(fromInd + 1) + ".tbl");
 			Scanner fileReader = null;
+			try {
+				fileReader = new Scanner(tbl);
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			}
+			String schemaLine = fileReader.nextLine();
+			String[] schema = schemaLine.split(" \\| ");
+			String[] atts = new String[schema.length];
+			for (int i = 0; i < atts.length; i++) {
+				atts[i] = schema[i].split(" ")[0];
+			}
+			ArrayList<String> attribs = new ArrayList<>(Arrays.asList(atts));
+			int[] colNums = new int[cols.size()];
 
+			for (int i = 0; i < colNums.length; i++) {
+				for (int j = 0; j < attribs.size(); j++) {
+					if (cols.get(i).equalsIgnoreCase(attribs.get(j))) {
+						colNums[i] = j;
+					}
+				}
+			}
+			for (int i = 0; i < colNums.length; i++) {
+				System.out.print(schema[colNums[i]]);
+				if (i != colNums.length - 1) {
+					System.out.print(" | ");
+				}
+			}
+			String whereAtt = "";
+			String whereOp = "";
+			String whereParam = "";
+			int whereAttInd = -1;
+			int whereSchemaNum = -1;
+			if (whereInd != -1) {
+				whereAttInd = whereInd + 1;
+				whereAtt = parseTree.get(whereAttInd);
+				whereOp = parseTree.get(whereInd + 2);
+				whereParam = parseTree.get(whereInd + 3);
+				for (int i = 0; i < schema.length; i++) {
+					if (atts[i].equalsIgnoreCase(whereAtt)) {
+						whereSchemaNum = i;
+					}
+				}
+			}
+			System.out.println();
+			while (fileReader.hasNextLine()) {
+				String line = fileReader.nextLine();
+				String[] input = line.split(" \\| ");
+				if (whereInd == -1) {
+					for (int i = 0; i < colNums.length; i++) {
+						System.out.print(input[colNums[i]]);
+						if (i != colNums.length - 1) {
+							System.out.print(" | ");
+						}
+					}
+					System.out.println();
+				} else {
+					if (matches(input[whereSchemaNum], whereOp, whereParam)) {
+						for (int i = 0; i < colNums.length; i++) {
+							System.out.print(input[colNums[i]]);
+							if (i != colNums.length - 1) {
+								System.out.print(" | ");
+							}
+						}
+						System.out.println();
+					}
+				}
+
+			}
 			return;
 		}
 		// Select all from table
@@ -189,8 +264,8 @@ public class DBMS {
 				System.err.println("!Failed to query table " + parseTree.get(2) + " as it does not exist");
 				return;
 			}
-			while (fileReader.hasNext()) {
-				System.out.print(fileReader.next() + " ");
+			while (fileReader.hasNextLine()) {
+				System.out.println(fileReader.nextLine());
 			}
 			System.out.println();
 			fileReader.close();
@@ -362,15 +437,281 @@ public class DBMS {
 		File file = new File(useDirectory + "/" + parseTree.get(1) + ".tbl");
 		if (!file.exists()) {
 			System.err.println("Failed to insert into table, as it does not exist.");
+			return;
 		}
 		FileWriter fw = null;
 		try {
-			fw = new FileWriter(file);
+			fw = new FileWriter(file, true);
+			// This is the case where it is not value specifc (inserting a thing for each
+			// thing).
+			if (parseTree.get(2).equalsIgnoreCase("values") || parseTree.get(2).startsWith("values")) {
+				parseTree.remove(0); // remove into
+				parseTree.remove(0); // remove tblname
+				parseTree.remove(0); // remove values
 
+				String vals = "";
+				for (String s : parseTree) {
+					vals += s + " ";
+				}
+				parseTree.clear();
+				// remove parenthesis if they are there.
+				if (vals.charAt(0) == '(' && vals.charAt(vals.length() - 2) == ')') {
+					vals = vals.substring(1, vals.length() - 2);
+				}
+				parseTree = new ArrayList<String>(Arrays.asList(vals.split(", ")));
+				for (int i = 0; i < parseTree.size(); i++) {
+					fw.write(parseTree.get(i));
+					if (i != parseTree.size() - 1) {
+						fw.write(" | ");
+					}
+				}
+				fw.write("\n");
+				fw.close();
+			}
 		} catch (IOException e) {
 
 		}
+		System.out.println("1 new record inserted");
+	}
 
+	// delete from <tablename> : where <attname> (> : < : >= : <= : = : !=) param
+	public static void delete(ArrayList<String> parseTree) {
+		int recordsDeleted = 0;
+		if (parseTree.size() == 2 && parseTree.get(0).equalsIgnoreCase("from")) {
+			String filename = parseTree.get(1);
+			// System.out.println(parseTree);
+			try {
+				File file = new File(useDirectory + "/" + filename + ".tbl");
+				Scanner filereader = new Scanner(file);
+				String line = filereader.nextLine();
+
+				while (filereader.hasNextLine()) {
+					recordsDeleted++;
+					@SuppressWarnings("unused")
+					String s = filereader.nextLine();
+				}
+				filereader.close();
+				FileWriter fw = new FileWriter(file);
+				fw.write(line + "\n");
+				fw.close();
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			System.out.println(recordsDeleted + " records deleted.");
+			return;
+		}
+		String filename = parseTree.remove(1); // remove <tblname>
+		parseTree.remove(0); // remove "From"
+		if (!parseTree.get(0).equalsIgnoreCase("where")) {
+			System.out.println("!invalid syntax");
+			return;
+		}
+		parseTree.remove(0); // remove "where"
+		String att = parseTree.remove(0);
+		String operator = parseTree.remove(0);
+		String param = parseTree.remove(0);
+
+		File tbl = new File(useDirectory + "/" + filename + ".tbl");
+		Scanner tblReader = null;
+		try {
+			tblReader = new Scanner(tbl);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String schemaLine = tblReader.nextLine();
+		String[] schema = schemaLine.split(" \\| ");
+		String[] atts = new String[schema.length];
+		for (int i = 0; i < atts.length; i++) {
+			atts[i] = schema[i].split(" ")[0];
+		}
+
+		int attNum = -1;
+		for (int i = 0; i < atts.length; i++) {
+			if (atts[i].equalsIgnoreCase(att)) {
+				attNum = i;
+			}
+		}
+		if (attNum == -1) {
+			System.out.println("!Failed to delete attribute as it does not exist");
+			return;
+		}
+		// get all records
+		ArrayList<String[]> records = new ArrayList<String[]>();
+		while (tblReader.hasNextLine()) {
+			String[] s = tblReader.nextLine().split(" \\| ");
+			boolean deleteThisRecord = matches(s[attNum], operator, param);
+			if (deleteThisRecord) {
+				recordsDeleted++;
+				continue;
+			}
+			records.add(s);
+		}
+		try {
+			FileWriter fw = new FileWriter(tbl);
+			fw.write(schemaLine + "\n");
+			for (String[] s : records) {
+				for (int i = 0; i < s.length; i++) {
+					fw.write(s[i]);
+					if (i != s.length - 1) {
+						fw.write(" | ");
+					}
+				}
+				if (s != records.get(records.size() - 1)) {
+					fw.write("\n");
+				}
+			}
+			fw.write("\n");
+			fw.close();
+			System.out.println(recordsDeleted + " records deleted.");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+	}
+	// this file tests to see if two things match
+
+	// takes in the testString, operator, and paramater to match with.
+	private static boolean matches(String string, String operator, String param) {
+		String returnString = null;
+		boolean numeric = true;
+		float strasfloat = 0.0f;
+		float paramasfloat = 0.0f;
+		try {
+			strasfloat = Float.parseFloat(string);
+			paramasfloat = Float.parseFloat(param);
+		} catch (NumberFormatException e) {
+			numeric = false;
+		}
+
+		switch (operator) {
+		case ">": // greater than
+			if (numeric) {
+				returnString = (strasfloat > paramasfloat ? "null" : string);
+			} else {
+				System.out.println("> cannot be evaluated as a string");
+			}
+			break;
+		case "<": // less than
+			if (numeric) {
+				returnString = (strasfloat < paramasfloat ? "null" : string);
+			} else {
+				System.out.println("< cannot be evaluated as a string");
+			}
+			break;
+		case ">=": // greater than or equal to
+			if (numeric) {
+				returnString = (strasfloat < paramasfloat ? string : "null");
+			} else {
+				System.out.println(">= cannot be evaluated as a string");
+			}
+			break;
+		case "<=": // less than or equal to
+			if (numeric) {
+				returnString = (strasfloat > paramasfloat ? string : "null");
+			} else {
+				System.out.println("<= cannot be evaluated as a string");
+			}
+			break;
+		case "=": // equal to
+			if (numeric) {
+				returnString = (strasfloat != paramasfloat ? string : "null");
+			} else {
+				returnString = (string.equalsIgnoreCase(param) ? "null" : string);
+			}
+			break;
+		case "!=": // not equal to.
+			if (numeric) {
+				returnString = (strasfloat == paramasfloat ? string : "null");
+			} else {
+				returnString = (string.equalsIgnoreCase(param) ? string : "null");
+			}
+			break;
+		}
+		return returnString == "null" ? true : false;
+	}
+
+	// update <tblname> set <att> = <param> where <att2> = <param2>
+	public static void update(ArrayList<String> parseTree) {
+		int recordsModified = 0;
+		String tblname = parseTree.remove(0); // save and remove table name from parsetree.
+		if (!parseTree.get(0).equalsIgnoreCase("set") || !parseTree.get(4).equalsIgnoreCase("where")) {
+			System.err.println("Invalid Syntax");
+			return;
+		}
+		File tbl = new File(useDirectory + "/" + tblname + ".tbl");
+		Scanner tblReader = null;
+		try {
+			tblReader = new Scanner(tbl);
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String schemaLine = tblReader.nextLine();
+		String[] schema = schemaLine.split(" \\| ");
+		String[] atts = new String[schema.length];
+		for (int i = 0; i < atts.length; i++) {
+			atts[i] = schema[i].split(" ")[0];
+		}
+
+		String setAtt = parseTree.get(1);
+		String setParam = parseTree.get(3);
+		String whereAtt = parseTree.get(5);
+		String whereParam = parseTree.get(7);
+		parseTree.clear();// memory cleanup.
+
+		int setAttNum = -1;
+		int whereAttNum = -1;
+		for (int i = 0; i < atts.length; i++) {
+			if (atts[i].equalsIgnoreCase(setAtt)) {
+				setAttNum = i;
+			}
+			if (atts[i].equalsIgnoreCase(whereAtt)) {
+				whereAttNum = i;
+			}
+		}
+		if (setAttNum == -1 || whereAttNum == -1) {
+			System.err.println("!Failed to update attribute because selected attribute doesnt exist.");
+			return;
+		}
+
+		ArrayList<String[]> records = new ArrayList<String[]>();
+
+		while (tblReader.hasNextLine()) {
+			String[] input = tblReader.nextLine().split(" \\| ");
+			if (input[whereAttNum].equalsIgnoreCase(whereParam)) {
+				input[setAttNum] = setParam;
+				recordsModified++;
+			}
+			records.add(input);
+		}
+		tblReader.close();
+		try {
+			FileWriter fw = new FileWriter(tbl);
+			fw.write(schemaLine + "\n");
+			for (String[] s : records) {
+				for (int i = 0; i < s.length; i++) {
+					fw.write(s[i]);
+					if (i != s.length - 1) {
+						fw.write(" | ");
+					}
+				}
+				if (s != records.get(records.size() - 1)) {
+					fw.write("\n");
+				}
+			}
+			fw.write("\n");
+			fw.close();
+			System.out.println(recordsModified + " records modified.");
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

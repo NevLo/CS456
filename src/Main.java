@@ -65,7 +65,11 @@ public class Main {
 		}
 		// check to see if there is no semicolon (syntax error)
 		if (lineToParse.indexOf(';') == -1) {
-			lineToParse += " " + parseMultiLine(scan);
+			if (lineToParse.endsWith(" ")) {
+				lineToParse += parseMultiLine(scan);
+			} else {
+				lineToParse += " " + parseMultiLine(scan);
+			}
 			// System.out.println("!Invalid Syntax, missing ';'");
 			// return;
 		}
@@ -117,6 +121,8 @@ public class Main {
 		String line = s.nextLine();
 		// System.out.println(line);
 		if (line.indexOf(';') == -1) {
+			if (line.endsWith(" "))
+				return line + parseMultiLine(s);
 			return line + " " + parseMultiLine(s);
 		}
 		return line;

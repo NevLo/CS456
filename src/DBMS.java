@@ -160,6 +160,8 @@ public class DBMS {
 
 	// SELECT <REC:*> FROM <TBLNAME>
 	public static void select(ArrayList<String> parseTree) {
+		// please fucking rewrite this for the love of god holy shit.
+		// this is a travesty against god.
 		// check to see if a database is selected.
 		if (useDirectory == null) {
 			System.err.println("!Failed to select from table as no database has been used.");
@@ -272,6 +274,7 @@ public class DBMS {
 			return;
 		}
 		// select specific column from table.
+
 	}
 
 	// USE <DBNAME>
@@ -285,6 +288,7 @@ public class DBMS {
 		}
 	}
 
+	// ALTERS NEED AN UPDATE, IT CURRENTLY CLEARS THE CONTENTS OF THE TABLE.
 	// ALTER TABLE <TBLNAME> ADD <NAME> <TYPE>
 	// ALTER TABLE <TBLNAME> ADD (<NAME> <TYPE>...)
 	// ALTER TABLE <TBLNAME> REMOVE <NAME>

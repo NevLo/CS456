@@ -168,29 +168,103 @@ public class DBMS {
 			return;
 		}
 
-		// check to see if its the simple case of wanting a single column or all.
-		int whereInd = parseTree.indexOf("where");
-		if (!parseTree.get(1).equalsIgnoreCase("from")) {
-			// check to find the index of from
-			int fromInd = parseTree.indexOf("from");
+		boolean getAll = false;
+		int joinInd = parseTree.indexOf("join");
+		int joinType = -1; // 0 = inner, 1 = left outer, 2 = right outer, 3 = full outer, -1 = no join
+		if (joinInd != -1) {
+			if (parseTree.get(joinInd - 1).equalsIgnoreCase("inner"))
+				joinType = 0;
+			else if (parseTree.get(joinInd - 1).equalsIgnoreCase("left")
+					|| parseTree.get(joinInd - 2).equalsIgnoreCase("left"))
+				joinType = 1;
+			else if (parseTree.get(joinInd - 1).equalsIgnoreCase("right")
+					|| parseTree.get(joinInd - 2).equalsIgnoreCase("right"))
+				joinType = 2;
+			else if (parseTree.get(joinInd - 1).equalsIgnoreCase("full")
+					|| parseTree.get(joinInd - 2).equalsIgnoreCase("full"))
+				joinType = 3;
+		}
+
+		int fromInd = parseTree.indexOf("from");
+		ArrayList<String> cols = null;
+
+		if (fromInd != 1) {
 			// check to see if from index is -1 (syntax error)
 			if (fromInd == -1) {
 				System.err.println("!Failed to select due to a syntax error! FROM not included.");
 			}
 			// grab all coloumn names.
-			ArrayList<String> cols = new ArrayList<String>(parseTree.subList(0, fromInd));
+			cols = new ArrayList<String>(parseTree.subList(0, fromInd));
 			for (String s : cols) {
 				if (s.indexOf(',') == s.length() - 1) {
 					s = s.substring(0, s.length() - 1);
 				}
 			}
-			File tbl = new File(useDirectory + "/" + parseTree.get(fromInd + 1) + ".tbl");
-			Scanner fileReader = null;
-			try {
-				fileReader = new Scanner(tbl);
-			} catch (FileNotFoundException e) {
-				e.printStackTrace();
+		} else {
+			if (parseTree.get(0).equalsIgnoreCase("*")) {
+				getAll = true;
+				cols = new ArrayList<String>();
+			} else {
+				cols = new ArrayList<String>();
+				cols.add(parseTree.get(0));
 			}
+		}
+		boolean multipleTables = false;
+		ArrayList<Scanner> tableReaders = new ArrayList<Scanner>();
+		ArrayList<String[]> tables = null;
+		int whereInd = Math.max(parseTree.indexOf("where"), parseTree.indexOf("on"));
+		if (whereInd != -1 && whereInd - fromInd != 2) {
+			ArrayList<String> tablesUnformatted = new ArrayList<String>(parseTree.subList(fromInd + 1, whereInd));
+			System.out.println(joinType);
+			if (joinType != -1) {
+				tablesUnformatted.remove(2);
+				tablesUnformatted.remove(2);
+				if (joinType != 0) {
+					tablesUnformatted.remove(2);
+				}
+			}
+			System.out.println(tablesUnformatted);
+			String tablesString = "";
+			for (String s : tablesUnformatted) {
+				tablesString += s + " ";
+			}
+			System.out.println(tablesString);
+			String[] tableIDs = null;
+			if (joinType != -1) {
+				String[] temp = tablesString.split(" ");
+				tableIDs = new String[temp.length / 2];
+				for (int i = 0, j = 0; i < temp.length; i += 2, j++) {
+					tableIDs[j] = temp[i] + " " + temp[i + 1];
+				}
+			} else
+				tableIDs = tablesString.split(", ");
+			tables = new ArrayList<String[]>();
+			if (tableIDs[0].contains(" ")) {
+				for (String s : tableIDs) {
+					s.trim();
+					tables.add(s.split(" "));
+				}
+			} else {
+				for (String s : tableIDs)
+					tables.add(new String[] { s.trim() });
+			}
+		}
+		if (tables.size() > 1) {
+			multipleTables = true;
+		}
+
+		// File tbl = new File(useDirectory + "/" + parseTree.get(fromInd + 1) +
+		// ".tbl");
+		Scanner fileReader = null;
+		try {
+			for (String[] tab : tables) {
+				tableReaders.add(new Scanner(new File(useDirectory + "/" + tab[0] + ".tbl")));
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		if (!multipleTables) {
+			fileReader = tableReaders.get(0);
 			String schemaLine = fileReader.nextLine();
 			String[] schema = schemaLine.split(" \\| ");
 			String[] atts = new String[schema.length];
@@ -199,20 +273,29 @@ public class DBMS {
 			}
 			ArrayList<String> attribs = new ArrayList<>(Arrays.asList(atts));
 			int[] colNums = new int[cols.size()];
-
-			for (int i = 0; i < colNums.length; i++) {
-				for (int j = 0; j < attribs.size(); j++) {
-					if (cols.get(i).equalsIgnoreCase(attribs.get(j))) {
-						colNums[i] = j;
+			if (!getAll) {
+				for (int i = 0; i < colNums.length; i++) {
+					for (int j = 0; j < attribs.size(); j++) {
+						if (cols.get(i).equalsIgnoreCase(attribs.get(j))) {
+							colNums[i] = j;
+						}
+					}
+				}
+				for (int i = 0; i < colNums.length; i++) {
+					System.out.print(schema[colNums[i]]);
+					if (i != colNums.length - 1) {
+						System.out.print(" | ");
+					}
+				}
+			} else {
+				for (int i = 0; i < attribs.size(); i++) {
+					System.out.print(schema[i]);
+					if (i != colNums.length - 1) {
+						System.out.print(" | ");
 					}
 				}
 			}
-			for (int i = 0; i < colNums.length; i++) {
-				System.out.print(schema[colNums[i]]);
-				if (i != colNums.length - 1) {
-					System.out.print(" | ");
-				}
-			}
+			whereInd = Math.max(parseTree.indexOf("where"), parseTree.indexOf("on"));
 			String whereAtt = "";
 			String whereOp = "";
 			String whereParam = "";
@@ -233,16 +316,16 @@ public class DBMS {
 			while (fileReader.hasNextLine()) {
 				String line = fileReader.nextLine();
 				String[] input = line.split(" \\| ");
-				if (whereInd == -1) {
-					for (int i = 0; i < colNums.length; i++) {
-						System.out.print(input[colNums[i]]);
-						if (i != colNums.length - 1) {
+				if (getAll) {
+					for (int c = 0; c < input.length; c++) {
+						System.out.print(input[c]);
+						if (c != input.length - 1) {
 							System.out.print(" | ");
 						}
 					}
 					System.out.println();
 				} else {
-					if (matches(input[whereSchemaNum], whereOp, whereParam)) {
+					if (whereInd == -1) {
 						for (int i = 0; i < colNums.length; i++) {
 							System.out.print(input[colNums[i]]);
 							if (i != colNums.length - 1) {
@@ -250,31 +333,186 @@ public class DBMS {
 							}
 						}
 						System.out.println();
+					} else {
+						if (matches(input[whereSchemaNum], whereOp, whereParam)) {
+							for (int i = 0; i < colNums.length; i++) {
+								System.out.print(input[colNums[i]]);
+								if (i != colNums.length - 1) {
+									System.out.print(" | ");
+								}
+							}
+							System.out.println();
+						}
+					}
+				}
+			}
+		} else {
+			ArrayList<String> schemaLines = new ArrayList<String>();
+			for (Scanner s : tableReaders) {
+				schemaLines.add(s.nextLine());
+			}
+			ArrayList<String[]> schemas = new ArrayList<String[]>();
+			for (String s : schemaLines) {
+				schemas.add(s.split(" \\| "));
+			}
+			for (int i = 0; i < schemaLines.size(); i++) {
+				System.out.print(schemaLines.get(i));
+				if (i != schemaLines.size() - 1) {
+					System.out.print(" | ");
+				}
+			}
+
+			System.out.println("test");
+			ArrayList<String[]> atts = new ArrayList<String[]>();
+			for (int i = 0; i < schemas.size(); i++) {
+				atts.add(new String[schemas.get(i).length]);
+			}
+			ArrayList<ArrayList<String>> attribs = new ArrayList<ArrayList<String>>();
+			for (int i = 0; i < atts.size(); i++) {
+				ArrayList<String> temp = new ArrayList<String>();
+				for (int j = 0; j < atts.get(i).length; j++) {
+					atts.get(i)[j] = schemas.get(i)[j].split(" ")[0];
+				}
+				attribs.add(new ArrayList<>(Arrays.asList(atts.get(i))));
+			}
+
+			ArrayList<int[]> colNums = new ArrayList<int[]>();
+			whereInd = Math.max(parseTree.indexOf("where"), parseTree.indexOf("on"));
+			String whereAtt = "";
+			String whereOp = "";
+			String whereParam = "";
+			int whereAttInd = -1;
+			int[] schemaNumbers = new int[attribs.size()];
+			if (whereInd != -1) {
+				whereAttInd = whereInd + 1;
+				whereAtt = parseTree.get(whereAttInd);
+				// System.out.println(whereAtt);
+				whereOp = parseTree.get(whereInd + 2);
+				whereParam = parseTree.get(whereInd + 3);
+				// System.out.println(whereParam);
+				String[] whereAttWithTable = whereAtt.split("\\.");
+				String[] whereParamWithTable = whereParam.split("\\.");
+				// System.out.println(whereAttWithTable.length);
+				int whereAttNum = -1;
+				int whereParamNum = -1;
+				for (int i = 0; i < tables.size(); i++) {
+					String temp = tables.get(i)[1];
+					if (whereAttWithTable[0].equalsIgnoreCase(temp)) {
+						whereAttNum = i;
+					}
+					if (whereParamWithTable[0].equalsIgnoreCase(temp)) {
+						whereParamNum = i;
+					}
+				}
+				for (int i = 0; i < schemas.size(); i++) {
+					if (atts.get(whereAttNum)[i].equalsIgnoreCase(whereAttWithTable[1])) {
+						schemaNumbers[0] = i;
+					}
+				}
+				for (int i = 0; i < schemas.size(); i++) {
+					if (atts.get(whereParamNum)[i].equalsIgnoreCase(whereParamWithTable[1])) {
+						schemaNumbers[1] = i;
+					}
+				}
+			}
+			ArrayList<Integer> indexsToSkip = new ArrayList<Integer>();
+			ArrayList<ArrayList<String[]>> allInputLines = new ArrayList<ArrayList<String[]>>();
+			ArrayList<String[]> allLinesToPrint = new ArrayList<String[]>();
+			while (indexsToSkip.size() != tableReaders.size()) {
+				ArrayList<String[]> lines = new ArrayList<String[]>();
+				for (int i = 0; i < tableReaders.size(); i++) {
+					if (indexsToSkip.contains(i)) {
+						continue;
+					}
+					String line = tableReaders.get(i).nextLine();
+					String[] input = line.split(" \\| ");
+					lines.add(input);
+					if (!tableReaders.get(i).hasNextLine()) {
+						indexsToSkip.add(i);
+					}
+				}
+				allInputLines.add(lines);
+			}
+			// lines contains all the lines of input for each run of the code.
+			// so this would be somehting like:
+			// x | x | y | y or something.
+			ArrayList<Integer> alreadyPrinted = new ArrayList<Integer>();
+			for (int i = 0; i < allInputLines.size(); i++) {
+				for (int j = i; j < allInputLines.size(); j++) {
+					if (joinType == -1 || joinType == 0) {
+						// only if they have a match
+						if (matches(allInputLines.get(i).get(0)[schemaNumbers[0]], whereOp,
+								allInputLines.get(j).get(1)[schemaNumbers[1]])) {
+
+							for (int k = 0; k < allInputLines.get(i).get(0).length; k++) {
+								System.out.print(allInputLines.get(i).get(0)[k]);
+								System.out.print(" | ");
+							}
+							for (int k = 0; k < allInputLines.get(j).get(1).length; k++) {
+								System.out.print(allInputLines.get(j).get(1)[k]);
+								if (k != allInputLines.get(j).get(1).length - 1)
+									System.out.print(" | ");
+							}
+							System.out.println();
+							// left join always left, right if it has a match
+						}
+					} else if (joinType == 1) {
+						if (!alreadyPrinted.contains(i) || (matches(allInputLines.get(i).get(0)[schemaNumbers[0]],
+								whereOp, allInputLines.get(j).get(1)[schemaNumbers[1]]))) {
+							for (int k = 0; k < allInputLines.get(i).get(0).length; k++) {
+								System.out.print(allInputLines.get(i).get(0)[k]);
+								System.out.print(" | ");
+							}
+							alreadyPrinted.add(i);
+						}
+						if (matches(allInputLines.get(i).get(0)[schemaNumbers[0]], whereOp,
+								allInputLines.get(j).get(1)[schemaNumbers[1]])) {
+
+							for (int k = 0; k < allInputLines.get(j).get(1).length; k++) {
+								System.out.print(allInputLines.get(j).get(1)[k]);
+								if (k != allInputLines.get(j).get(1).length - 1)
+									System.out.print(" | ");
+							}
+							System.out.println();
+						} else {
+							System.out.println();
+						}
+						// right join always right, left if has a match
+					} else if (joinType == 2) {
+
+						// always both, regardless of match.
+					} else if (joinType == 3) {
+
 					}
 				}
 
 			}
-			return;
+			/*
+			 * if (matches(lines.get(0)[schemaNumbers[0]], whereOp,
+			 * lines.get(1)[schemaNumbers[1]])) {
+			 * for (int i = 0; i < lines.size(); i++) {
+			 * for (int j = 0; j < lines.get(i).length; j++) {
+			 * System.out.print(lines.get(i)[j]);
+			 * if (i != lines.size() - 1) {
+			 * System.out.print(" | ");
+			 * } else {
+			 * if (j != lines.get(i).length - 1) {
+			 * System.out.print(" | ");
+			 * }
+			 * }
+			 * }
+			 * }
+			 * }
+			 */
 		}
-		// Select all from table
-		if (parseTree.get(0).equalsIgnoreCase("*")) {
-			File tbl = new File(useDirectory + "/" + parseTree.get(2) + ".tbl");
-			Scanner fileReader = null;
-			try {
-				fileReader = new Scanner(tbl);
-			} catch (FileNotFoundException e) {
-				System.err.println("!Failed to query table " + parseTree.get(2) + " as it does not exist");
-				return;
-			}
-			while (fileReader.hasNextLine()) {
-				System.out.println(fileReader.nextLine());
-			}
-			System.out.println();
-			fileReader.close();
-			return;
-		}
-		// select specific column from table.
+	}
 
+	private static boolean checkHasNext(ArrayList<Scanner> tableReaders) {
+		boolean temp = false;
+		for (Scanner s : tableReaders) {
+			temp |= s.hasNext();
+		}
+		return temp;
 	}
 
 	// USE <DBNAME>
@@ -582,6 +820,8 @@ public class DBMS {
 
 	// takes in the testString, operator, and paramater to match with.
 	private static boolean matches(String string, String operator, String param) {
+		// System.out.println("> " + string + " : " + operator + " : " + param + " <");
+
 		String returnString = null;
 		boolean numeric = true;
 		float strasfloat = 0.0f;

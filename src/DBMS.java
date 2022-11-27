@@ -215,7 +215,6 @@ public class DBMS {
 		int whereInd = Math.max(parseTree.indexOf("where"), parseTree.indexOf("on"));
 		if (whereInd != -1 && whereInd - fromInd != 2) {
 			ArrayList<String> tablesUnformatted = new ArrayList<String>(parseTree.subList(fromInd + 1, whereInd));
-			System.out.println(joinType);
 			if (joinType != -1) {
 				tablesUnformatted.remove(2);
 				tablesUnformatted.remove(2);
@@ -223,12 +222,10 @@ public class DBMS {
 					tablesUnformatted.remove(2);
 				}
 			}
-			System.out.println(tablesUnformatted);
 			String tablesString = "";
 			for (String s : tablesUnformatted) {
 				tablesString += s + " ";
 			}
-			System.out.println(tablesString);
 			String[] tableIDs = null;
 			if (joinType != -1) {
 				String[] temp = tablesString.split(" ");
@@ -362,7 +359,6 @@ public class DBMS {
 				}
 			}
 
-			System.out.println("test");
 			ArrayList<String[]> atts = new ArrayList<String[]>();
 			for (int i = 0; i < schemas.size(); i++) {
 				atts.add(new String[schemas.get(i).length]);
@@ -417,7 +413,7 @@ public class DBMS {
 			}
 			ArrayList<Integer> indexsToSkip = new ArrayList<Integer>();
 			ArrayList<ArrayList<String[]>> allInputLines = new ArrayList<ArrayList<String[]>>();
-			ArrayList<String[]> allLinesToPrint = new ArrayList<String[]>();
+			ArrayList<String> allLinesToPrint = new ArrayList<String>();
 			while (indexsToSkip.size() != tableReaders.size()) {
 				ArrayList<String[]> lines = new ArrayList<String[]>();
 				for (int i = 0; i < tableReaders.size(); i++) {
@@ -436,7 +432,9 @@ public class DBMS {
 			// lines contains all the lines of input for each run of the code.
 			// so this would be somehting like:
 			// x | x | y | y or something.
+			System.out.println();
 			ArrayList<Integer> alreadyPrinted = new ArrayList<Integer>();
+			ArrayList<String> pleasePrintTheseOnly = new ArrayList<String>();
 			for (int i = 0; i < allInputLines.size(); i++) {
 				for (int j = i; j < allInputLines.size(); j++) {
 					if (joinType == -1 || joinType == 0) {
@@ -457,26 +455,41 @@ public class DBMS {
 							// left join always left, right if it has a match
 						}
 					} else if (joinType == 1) {
-						if (!alreadyPrinted.contains(i) || (matches(allInputLines.get(i).get(0)[schemaNumbers[0]],
-								whereOp, allInputLines.get(j).get(1)[schemaNumbers[1]]))) {
-							for (int k = 0; k < allInputLines.get(i).get(0).length; k++) {
-								System.out.print(allInputLines.get(i).get(0)[k]);
-								System.out.print(" | ");
+						ArrayList<String[]> toPrint = new ArrayList<String[]>();
+						
+						String[] test = new String[allInputLines.get(i).get(0).length * 2 - 1];
+						for(int g = 0; g < test.length; g++) {
+							if(g % 2 == 0) {
+								test[g] = allInputLines.get(i).get(0)[g/2];
+							}else {
+								test[g] = " | ";
 							}
-							alreadyPrinted.add(i);
 						}
+						
+						
+						toPrint.add(test);
+						toPrint.add(new String[] {" | "});
 						if (matches(allInputLines.get(i).get(0)[schemaNumbers[0]], whereOp,
 								allInputLines.get(j).get(1)[schemaNumbers[1]])) {
-
-							for (int k = 0; k < allInputLines.get(j).get(1).length; k++) {
-								System.out.print(allInputLines.get(j).get(1)[k]);
-								if (k != allInputLines.get(j).get(1).length - 1)
-									System.out.print(" | ");
+							test = new String[allInputLines.get(j).get(1).length * 2 - 1];
+							for(int g = 0; g < test.length; g++) {
+								if(g % 2 == 0) {
+									test[g] = allInputLines.get(j).get(1)[g/2];
+								}else {
+									test[g] = " | ";
+								}
 							}
-							System.out.println();
-						} else {
-							System.out.println();
+							
+							
+							toPrint.add(test);
 						}
+						String temp = "";
+						for(String[] sa : toPrint) {
+							for(String s: sa) {
+								temp+=s;
+							}
+						}
+						pleasePrintTheseOnly.add(temp);
 						// right join always right, left if has a match
 					} else if (joinType == 2) {
 
@@ -487,6 +500,22 @@ public class DBMS {
 				}
 
 			}
+			
+			for(int i = 0; i < pleasePrintTheseOnly.size(); i++) {
+				boolean printable = true;
+				for(int j = 0; j < pleasePrintTheseOnly.size();j++) {
+					if(pleasePrintTheseOnly.get(j).startsWith(pleasePrintTheseOnly.get(i)) &&
+							pleasePrintTheseOnly.get(j).length() > pleasePrintTheseOnly.get(i).length()) {
+						pleasePrintTheseOnly.remove(i);
+						printable = false;
+						break;
+					}
+				}
+				if(printable)
+				System.out.println(pleasePrintTheseOnly.get(i));
+			}
+			
+			
 			/*
 			 * if (matches(lines.get(0)[schemaNumbers[0]], whereOp,
 			 * lines.get(1)[schemaNumbers[1]])) {

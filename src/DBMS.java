@@ -12,6 +12,7 @@ import java.util.Scanner;
 
 public class DBMS {
 	private static File useDirectory;
+	private static ArrayList<String> lockedFiles = new ArrayList<String>();
 
 	// CREATE DATABASE <NAME>;
 	// CREATE TABLE <NAME> (ARGS...);
@@ -413,7 +414,6 @@ public class DBMS {
 			}
 			ArrayList<Integer> indexsToSkip = new ArrayList<Integer>();
 			ArrayList<ArrayList<String[]>> allInputLines = new ArrayList<ArrayList<String[]>>();
-			ArrayList<String> allLinesToPrint = new ArrayList<String>();
 			while (indexsToSkip.size() != tableReaders.size()) {
 				ArrayList<String[]> lines = new ArrayList<String[]>();
 				for (int i = 0; i < tableReaders.size(); i++) {
@@ -433,7 +433,6 @@ public class DBMS {
 			// so this would be somehting like:
 			// x | x | y | y or something.
 			System.out.println();
-			ArrayList<Integer> alreadyPrinted = new ArrayList<Integer>();
 			ArrayList<String> pleasePrintTheseOnly = new ArrayList<String>();
 			for (int i = 0; i < allInputLines.size(); i++) {
 				for (int j = i; j < allInputLines.size(); j++) {
@@ -456,37 +455,35 @@ public class DBMS {
 						}
 					} else if (joinType == 1) {
 						ArrayList<String[]> toPrint = new ArrayList<String[]>();
-						
+
 						String[] test = new String[allInputLines.get(i).get(0).length * 2 - 1];
-						for(int g = 0; g < test.length; g++) {
-							if(g % 2 == 0) {
-								test[g] = allInputLines.get(i).get(0)[g/2];
-							}else {
+						for (int g = 0; g < test.length; g++) {
+							if (g % 2 == 0) {
+								test[g] = allInputLines.get(i).get(0)[g / 2];
+							} else {
 								test[g] = " | ";
 							}
 						}
-						
-						
+
 						toPrint.add(test);
-						toPrint.add(new String[] {" | "});
+						toPrint.add(new String[] { " | " });
 						if (matches(allInputLines.get(i).get(0)[schemaNumbers[0]], whereOp,
 								allInputLines.get(j).get(1)[schemaNumbers[1]])) {
 							test = new String[allInputLines.get(j).get(1).length * 2 - 1];
-							for(int g = 0; g < test.length; g++) {
-								if(g % 2 == 0) {
-									test[g] = allInputLines.get(j).get(1)[g/2];
-								}else {
+							for (int g = 0; g < test.length; g++) {
+								if (g % 2 == 0) {
+									test[g] = allInputLines.get(j).get(1)[g / 2];
+								} else {
 									test[g] = " | ";
 								}
 							}
-							
-							
+
 							toPrint.add(test);
 						}
 						String temp = "";
-						for(String[] sa : toPrint) {
-							for(String s: sa) {
-								temp+=s;
+						for (String[] sa : toPrint) {
+							for (String s : sa) {
+								temp += s;
 							}
 						}
 						pleasePrintTheseOnly.add(temp);
@@ -500,48 +497,22 @@ public class DBMS {
 				}
 
 			}
-			
-			for(int i = 0; i < pleasePrintTheseOnly.size(); i++) {
+
+			for (int i = 0; i < pleasePrintTheseOnly.size(); i++) {
 				boolean printable = true;
-				for(int j = 0; j < pleasePrintTheseOnly.size();j++) {
-					if(pleasePrintTheseOnly.get(j).startsWith(pleasePrintTheseOnly.get(i)) &&
-							pleasePrintTheseOnly.get(j).length() > pleasePrintTheseOnly.get(i).length()) {
+				for (int j = 0; j < pleasePrintTheseOnly.size(); j++) {
+					if (pleasePrintTheseOnly.get(j).startsWith(pleasePrintTheseOnly.get(i))
+							&& pleasePrintTheseOnly.get(j).length() > pleasePrintTheseOnly.get(i).length()) {
 						pleasePrintTheseOnly.remove(i);
 						printable = false;
 						break;
 					}
 				}
-				if(printable)
-				System.out.println(pleasePrintTheseOnly.get(i));
+				if (printable)
+					System.out.println(pleasePrintTheseOnly.get(i));
 			}
-			
-			
-			/*
-			 * if (matches(lines.get(0)[schemaNumbers[0]], whereOp,
-			 * lines.get(1)[schemaNumbers[1]])) {
-			 * for (int i = 0; i < lines.size(); i++) {
-			 * for (int j = 0; j < lines.get(i).length; j++) {
-			 * System.out.print(lines.get(i)[j]);
-			 * if (i != lines.size() - 1) {
-			 * System.out.print(" | ");
-			 * } else {
-			 * if (j != lines.get(i).length - 1) {
-			 * System.out.print(" | ");
-			 * }
-			 * }
-			 * }
-			 * }
-			 * }
-			 */
-		}
-	}
 
-	private static boolean checkHasNext(ArrayList<Scanner> tableReaders) {
-		boolean temp = false;
-		for (Scanner s : tableReaders) {
-			temp |= s.hasNext();
 		}
-		return temp;
 	}
 
 	// USE <DBNAME>
@@ -985,6 +956,16 @@ public class DBMS {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+	}
+
+	public static void commit() {
+		// TODO Auto-generated method stub
+
+	}
+
+	public static void beginTransaction() {
+		// TODO Auto-generated method stub
+
 	}
 
 }

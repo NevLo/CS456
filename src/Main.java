@@ -111,6 +111,10 @@ public class Main {
 			DBMS.delete(parseTree);
 		else if (CMD.equalsIgnoreCase("update"))
 			DBMS.update(parseTree);
+		else if (CMD.equalsIgnoreCase("commit"))
+			DBMS.commit();
+		else if (CMD.equalsIgnoreCase("begin"))
+			DBMS.beginTransaction();
 		else
 			System.out.println("!Command Not Recognized!");
 		// Just to make sure memory gets clear properly.

@@ -6,6 +6,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -110,7 +112,6 @@ public class DBMS {
 			table.write("\n");
 			table.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		System.out.println("Table " + tblname + " created.");
@@ -189,7 +190,7 @@ public class DBMS {
 				joinType = 3;
 		}
 
-		int fromInd = parseTree.indexOf("from");
+		int fromInd = Math.max(parseTree.indexOf("from"), parseTree.indexOf("FROM"));
 		ArrayList<String> cols = null;
 
 		if (fromInd != 1) {
@@ -208,6 +209,15 @@ public class DBMS {
 			if (parseTree.get(0).equalsIgnoreCase("*")) {
 				getAll = true;
 				cols = new ArrayList<String>();
+			} else if (parseTree.get(0).equalsIgnoreCase("count(*)")) {
+				count(parseTree);
+				return;
+			} else if (parseTree.get(0).startsWith("max(") || parseTree.get(0).startsWith("MAX(")) {
+				max(parseTree);
+				return;
+			} else if (parseTree.get(0).startsWith("avg(") || parseTree.get(0).startsWith("AVG(")) {
+				average(parseTree);
+				return;
 			} else {
 				cols = new ArrayList<String>();
 				cols.add(parseTree.get(0));
@@ -524,6 +534,82 @@ public class DBMS {
 			}
 
 		}
+	}
+
+	private static void average(ArrayList<String> parseTree) {
+		String col = parseTree.remove(0);
+		// avg(<something>) -> <something>
+		col = col.substring(4, col.length() - 1);
+		// System.out.println(col);
+		File tbl = new File(useDirectory + "/" + parseTree.get(1) + tableFileType);
+		try {
+			Scanner scanner = new Scanner(tbl);
+			int colNum = -1;
+			String[] schema = scanner.nextLine().split(" \\| ");
+			for (int iterator = 0; iterator < schema.length; iterator++) {
+				String[] schemaVariable = schema[iterator].split(" ");
+				if (schemaVariable[0].equalsIgnoreCase(col)) {
+					colNum = iterator;
+					break;
+				}
+			}
+			if (colNum == -1) {
+				System.err.println("Failed to average column " + col + " as it does not exist!");
+			}
+			float count = 0;
+			float sum = 0;
+			while (scanner.hasNextLine()) {
+				count++;
+				sum += Float.parseFloat(scanner.nextLine().split(" \\| ")[colNum]);
+			}
+			System.out.println(sum / count);
+			scanner.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private static void max(ArrayList<String> parseTree) {
+		String col = parseTree.remove(0);
+		// max(<something>) -> <something>
+		col = col.substring(4, col.length() - 1);
+		File tbl = new File(useDirectory + "/" + parseTree.get(1) + tableFileType);
+		try {
+			Scanner scanner = new Scanner(tbl);
+			int colNum = -1;
+			String[] schema = scanner.nextLine().split(" \\| ");
+			for (int iterator = 0; iterator < schema.length; iterator++) {
+				String[] schemaVariable = schema[iterator].split(" ");
+				if (schemaVariable[0].equalsIgnoreCase(col)) {
+					colNum = iterator;
+					break;
+				}
+			}
+			if (colNum == -1) {
+				System.err.println("Failed to find max of column " + col + " as it does not exist!");
+			}
+			int max = 0;
+			while (scanner.hasNextLine()) {
+
+				max = Math.max(max, Integer.parseInt(scanner.nextLine().split(" \\| ")[colNum]));
+			}
+			System.out.println(max);
+			scanner.close();
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private static void count(ArrayList<String> parseTree) {
+		try {
+			long count = Files.lines(Paths.get(useDirectory + "/" + parseTree.get(2) + tableFileType)).count() - 1;
+			System.out.println(count);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 	// USE <DBNAME>

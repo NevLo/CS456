@@ -18,9 +18,23 @@ import java.util.Scanner;
  *  -Table Deletion
  *  -Table Update
  *  -Table Query
- * Part 2: __ (Due: __/__/2022)
- * Part 3: __ (Due: __/__/2022)
- * Part 4: __ (Due: __/__/2022)
+ * Part 2: Basic Data Manipulation (Due: 10/31/2022)
+ *  -Tuple Creation
+ *  -Tuple Deletion
+ *  -Tuple Update
+ *  -Tuple Query
+ * Part 3: Table Joins (Due: 11/21/2022)
+ *  -Inner Join
+ *  -Left Outer Join
+ *  -Right Outer Join
+ *  -Full Outer Join
+ * Part 4: Transactions (Due: 12/15/2022)
+ *  -File Locking
+ *  -File Commiting
+ * Part 5: Aggregate Queries (Due: 12/15/2022) (BONUS)
+ *  -COUNT
+ *  -AVG
+ *  -MAX
  */
 public class Main {
 	public static void main(String[] args) throws FileNotFoundException {
@@ -162,8 +176,19 @@ public class Main {
  * + Added Method Stubs for Create,Drop,Select,Alter,Use.
  * + Worked on Use and Create implementation.
  * ------------------------------------------------------------------
+ * | * * * * | + Finished parseCMD method
+ * | 9/24/22 |
  * | * * * * |
- * | 9/21/22 |
+ * -----------------------------------------------------------------
+ * | * * * * | + Added method stub for insert.
+ * | 9/29/22 |
  * | * * * * |
- * |
+ * ------------------------------------------------------------------
+ * | * * * * | + Added parseMultiLine
+ * | 11/3/22 | + Added method stubs for update and delete.
+ * | * * * * |
+ * ------------------------------------------------------------------
+ * | * * * * | + Added method stub for begin transaction
+ * | 12/2/22 | + Added method stub for commit
+ * | * * * * |
  */

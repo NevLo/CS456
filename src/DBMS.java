@@ -12,7 +12,10 @@ import java.util.Scanner;
 
 public class DBMS {
 	private static File useDirectory;
+	private static boolean inTransaction;
 	private static ArrayList<String> lockedFiles = new ArrayList<String>();
+	private final static String lockFileSuffix = "_locked";
+	private final static String tableFileType = ".tbl";
 
 	// CREATE DATABASE <NAME>;
 	// CREATE TABLE <NAME> (ARGS...);
@@ -56,7 +59,7 @@ public class DBMS {
 			return;
 		}
 		// Don't create a table if a table with the same name exists.
-		if ((new File(useDirectory + "/" + tblname + ".tbl").exists())) {
+		if ((new File(useDirectory + "/" + tblname + tableFileType).exists())) {
 			System.err.println("Failed to create table" + tblname + " because it already exists.");
 			return;
 		}
@@ -91,7 +94,7 @@ public class DBMS {
 			types.add(atType[1]);
 		}
 		// create a new filewriter for the table.
-		File newTable = new File(useDirectory + "/" + tblname + ".tbl");
+		File newTable = new File(useDirectory + "/" + tblname + tableFileType);
 		FileWriter table;
 		try {
 			// init filewriter
@@ -133,11 +136,11 @@ public class DBMS {
 		}
 		String tblname = parseTree.get(0);
 		// Don't drop the table if it doesnt exist.
-		if (!(new File(useDirectory + "/" + tblname + ".tbl")).exists()) {
+		if (!(new File(useDirectory + "/" + tblname + tableFileType)).exists()) {
 			System.err.println("!Failed to delete table " + tblname + " because it does not exist");
 			return;
 		}
-		File tbl = new File(useDirectory + "/" + tblname + ".tbl");
+		File tbl = new File(useDirectory + "/" + tblname + tableFileType);
 		tbl.delete();
 		System.out.println("Table " + tblname + " deleted.");
 	}
@@ -246,17 +249,28 @@ public class DBMS {
 				for (String s : tableIDs)
 					tables.add(new String[] { s.trim() });
 			}
-		}
-		if (tables.size() > 1) {
-			multipleTables = true;
+			if (tables.size() > 1) {
+				multipleTables = true;
+			}
+		} else if (fromInd == 1) {
+			tables = new ArrayList<String[]>();
+			tables.add(new String[] { parseTree.get(2), "" });
 		}
 
 		// File tbl = new File(useDirectory + "/" + parseTree.get(fromInd + 1) +
-		// ".tbl");
+		// tableFileType);
 		Scanner fileReader = null;
 		try {
 			for (String[] tab : tables) {
-				tableReaders.add(new Scanner(new File(useDirectory + "/" + tab[0] + ".tbl")));
+				boolean lockFileExists = new File(useDirectory + "/" + tab[0] + lockFileSuffix + tableFileType)
+						.exists();
+				if ((lockFileExists && lockedFiles.contains(tab[0])) || !lockFileExists) {
+					tableReaders.add(new Scanner(new File(useDirectory + "/" + tab[0] + tableFileType)));
+				} else {
+					tableReaders
+							.add(new Scanner(new File(useDirectory + "/" + tab[0] + lockFileSuffix + tableFileType)));
+				}
+
 			}
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
@@ -366,14 +380,11 @@ public class DBMS {
 			}
 			ArrayList<ArrayList<String>> attribs = new ArrayList<ArrayList<String>>();
 			for (int i = 0; i < atts.size(); i++) {
-				ArrayList<String> temp = new ArrayList<String>();
 				for (int j = 0; j < atts.get(i).length; j++) {
 					atts.get(i)[j] = schemas.get(i)[j].split(" ")[0];
 				}
 				attribs.add(new ArrayList<>(Arrays.asList(atts.get(i))));
 			}
-
-			ArrayList<int[]> colNums = new ArrayList<int[]>();
 			whereInd = Math.max(parseTree.indexOf("where"), parseTree.indexOf("on"));
 			String whereAtt = "";
 			String whereOp = "";
@@ -544,7 +555,7 @@ public class DBMS {
 		if (!tbl.equalsIgnoreCase("table")) {
 			System.err.println("!Invalid Syntax: " + tbl + " is not a valid keyword.");
 		}
-		File tblFile = new File(useDirectory + "/" + tblname + ".tbl");
+		File tblFile = new File(useDirectory + "/" + tblname + tableFileType);
 		Scanner fileReader = null;
 		try {
 			fileReader = new Scanner(tblFile);
@@ -676,7 +687,7 @@ public class DBMS {
 			System.err.println("Failed to insert into table because no database has been selected.");
 			return;
 		}
-		File file = new File(useDirectory + "/" + parseTree.get(1) + ".tbl");
+		File file = new File(useDirectory + "/" + parseTree.get(1) + tableFileType);
 		if (!file.exists()) {
 			System.err.println("Failed to insert into table, as it does not exist.");
 			return;
@@ -723,7 +734,7 @@ public class DBMS {
 			String filename = parseTree.get(1);
 			// System.out.println(parseTree);
 			try {
-				File file = new File(useDirectory + "/" + filename + ".tbl");
+				File file = new File(useDirectory + "/" + filename + tableFileType);
 				Scanner filereader = new Scanner(file);
 				String line = filereader.nextLine();
 
@@ -757,7 +768,7 @@ public class DBMS {
 		String operator = parseTree.remove(0);
 		String param = parseTree.remove(0);
 
-		File tbl = new File(useDirectory + "/" + filename + ".tbl");
+		File tbl = new File(useDirectory + "/" + filename + tableFileType);
 		Scanner tblReader = null;
 		try {
 			tblReader = new Scanner(tbl);
@@ -884,11 +895,42 @@ public class DBMS {
 	public static void update(ArrayList<String> parseTree) {
 		int recordsModified = 0;
 		String tblname = parseTree.remove(0); // save and remove table name from parsetree.
+		File lockFile;
+		File tbl = new File(useDirectory + "/" + tblname + tableFileType);
+		if (new File(useDirectory + "/" + tblname + lockFileSuffix + tableFileType).exists()) {
+			if (!lockedFiles.contains(tblname)) {
+				System.err.println("Error: Table " + tblname + " is locked!");
+				return;
+			}
+		} else {
+			lockedFiles.add(tblname);
+			lockFile = new File(useDirectory + "/" + tblname + lockFileSuffix + tableFileType);
+			try {
+				Scanner s = new Scanner(tbl);
+				FileWriter fw = new FileWriter(lockFile);
+
+				while (s.hasNextLine()) {
+					fw.write(s.nextLine());
+					fw.write("\n");
+				}
+				s.close();
+				fw.close();
+
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
+		}
+
 		if (!parseTree.get(0).equalsIgnoreCase("set") || !parseTree.get(4).equalsIgnoreCase("where")) {
 			System.err.println("Invalid Syntax");
 			return;
 		}
-		File tbl = new File(useDirectory + "/" + tblname + ".tbl");
+
 		Scanner tblReader = null;
 		try {
 			tblReader = new Scanner(tbl);
@@ -958,14 +1000,64 @@ public class DBMS {
 		}
 	}
 
+	// commit;
 	public static void commit() {
-		// TODO Auto-generated method stub
+		if (!inTransaction) {
+			System.err.println("Failed to commit, no transaction in process");
+			return;
+		}
+		if (lockedFiles.isEmpty()) {
+			System.err.println("Transaction Abort!");
+			inTransaction = false;
+			return;
+		}
 
+		for (String table : lockedFiles) {
+			File fileToReceive = new File(useDirectory + "/" + table + lockFileSuffix + tableFileType);
+			File fileToCommit = new File(useDirectory + "/" + table + tableFileType);
+			try {
+				Scanner fileReader = new Scanner(fileToCommit);
+				FileWriter fw = new FileWriter(fileToReceive);
+				while (fileReader.hasNextLine()) {
+					fw.write(fileReader.nextLine());
+					fw.write("\n");
+				}
+
+				fw.close();
+				fileReader.close();
+			} catch (FileNotFoundException e) {
+
+			} catch (IOException e) {
+
+			}
+			// fileToReceive.renameTo(fileToCommit);
+			fileToCommit.delete();
+			File tableFile = new File(useDirectory + "/" + table + tableFileType);
+			try {
+				Scanner fileReader = new Scanner(fileToReceive);
+				FileWriter fw = new FileWriter(tableFile);
+				while (fileReader.hasNextLine()) {
+					fw.write(fileReader.nextLine());
+					fw.write("\n");
+				}
+
+				fw.close();
+				fileReader.close();
+			} catch (FileNotFoundException e) {
+
+			} catch (IOException e) {
+
+			}
+			fileToReceive.delete();
+		}
+		System.out.println("Transaction Commited!");
+		inTransaction = false;
 	}
 
+	// begin transaction;
 	public static void beginTransaction() {
-		// TODO Auto-generated method stub
-
+		System.out.println("Transaction Starts!");
+		inTransaction = true;
 	}
 
 }
